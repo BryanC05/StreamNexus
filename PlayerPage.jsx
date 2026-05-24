@@ -5,6 +5,7 @@ import {
   getTitleFromEntry, isFavorite, toggleFavorite, saveProgress,
   getSavedProgress, SERVER_KEY, readStore, writeStore, autoFetchSubtitles
 } from './app.js';
+import './royal-theme.css';
 
 export default function PlayerPage() {
   const [params] = useSearchParams();
@@ -18,9 +19,11 @@ export default function PlayerPage() {
     if (saved.includes("vidsrc.net") || saved.includes("vidsrc.to") || saved.includes("embed.su")) saved = "https://vidsrc.me/embed";
     return saved;
   });
-  const [color, setColor] = useState('#e50914');
+  const [color, setColor] = useState('#d4af37');
   const [progress, setProgress] = useState(params.get('progress') || '');
   const [autoPlay, setAutoPlay] = useState(false);
+  const [lang, setLang] = useState(params.get('lang') || '');
+  const [subtitles, setSubtitles] = useState(params.get('subtitles') || '');
 
   const [playerMeta, setPlayerMeta] = useState(mediaType === 'tv' ? `TV Series - TMDB ${tmdbId}` : `Movie - TMDB ${tmdbId}`);
   const [tvSeasons, setTvSeasons] = useState([]);
@@ -110,16 +113,17 @@ export default function PlayerPage() {
     if (mediaType === 'tv') path = `${server}/tv/${tmdbId}/${season}/${episode}`;
     const query = new URLSearchParams();
     if (color) query.set('color', color.replace('#', ''));
+    if (autoPlay) query.set('autoPlay', 'true');
+    if (Number(progress) > 0) query.set('progress', progress);
     if (lang) {
       query.set('lang', lang);
       query.set('ds_lang', lang);
     }
-    if (subtitles) {query.set('subtitles', subtitles);
+    if (subtitles) {
+      query.set('subtitles', subtitles);
       query.set('sub', subtitles);
       query.set('cc', subtitles);
     }
-    if (autoPlay) query.set('autoPlay', 'true');
-    if (Number(progress) > 0) query.set('progress', progress);
     const qStr = query.toString();
     return qStr ? `${path}?${qStr}` : path;
   };
@@ -159,6 +163,8 @@ export default function PlayerPage() {
             </label>
             <label className="field"><span>TMDB ID</span><input type="number" value={tmdbId} onChange={e => setTmdbId(e.target.value)} /></label>
             <label className="field"><span>Start Time</span><input type="number" value={progress} onChange={e => setProgress(e.target.value)} /></label>
+          <label className="field"><span>Subtitle Lang</span><input type="text" placeholder="e.g. en" value={lang} onChange={e => setLang(e.target.value)} /></label>
+          <label className="field"><span>Subtitle URL</span><input type="url" placeholder="External .vtt/.srt URL" value={subtitles} onChange={e => setSubtitles(e.target.value)} /></label>
             <div className="field">
               <span>Subtitles Helper</span>
               <div style={{ display: 'flex', gap: '8px' }}>
@@ -174,27 +180,27 @@ export default function PlayerPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
                 <h3>Episodes</h3>
                 {tvSeasons.length > 0 && (
-                  <select className="visual-season-select" style={{background: '#222', color: '#fff', padding: '0.5rem'}} value={season} onChange={e => { setSeason(e.target.value); setEpisode(1); setProgress(''); }}>
+                  <select className="visual-season-select" style={{background: '#131b2f', color: '#f8fafc', padding: '0.5rem'}} value={season} onChange={e => { setSeason(e.target.value); setEpisode(1); setProgress(''); }}>
                     {tvSeasons.filter(s => s.season_number > 0).map(s => <option key={s.season_number} value={s.season_number}>Season {s.season_number}</option>)}
                   </select>
                 )}
               </div>
 
               {!DEFAULT_TMDB_KEY ? (
-                <div style={{ padding: '1.5rem', textAlign: 'center', border: '1px dashed #444', borderRadius: '8px', color: '#aaa' }}>
+                <div style={{ padding: '1.5rem', textAlign: 'center', border: '1px dashed #4361ee', borderRadius: '12px', color: '#94a3b8' }}>
                   <strong>Episodes List Unavailable</strong><br/>
                   To view episode names and thumbnails, please add a valid TMDB API Key to your <code>env.js</code> file.
                 </div>
               ) : episodesList.length === 0 ? (
-                <div style={{ padding: '1.5rem', color: '#aaa' }}>Loading episodes for Season {season}...</div>
+                <div style={{ padding: '1.5rem', color: '#94a3b8' }}>Loading episodes for Season {season}...</div>
               ) : (
                 <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
                   {episodesList.map(ep => (
-                    <button key={ep.episode_number} onClick={() => { setEpisode(ep.episode_number); setProgress(''); window.scrollTo({top: 0, behavior: 'smooth'}); }} style={{ display: 'flex', gap: '1rem', padding: '0.75rem', background: Number(episode) === ep.episode_number ? '#222' : '#1a1a1a', border: '1px solid #333', textAlign: 'left', color: '#eee', cursor: 'pointer' }}>
-                      {ep.still_path ? <img src={`${TMDB_IMAGE_URL}/w342${ep.still_path}`} width="120" height="68" style={{objectFit:'cover'}} /> : <div style={{width: 120, height: 68, background:'#333'}}></div>}
+                    <button key={ep.episode_number} onClick={() => { setEpisode(ep.episode_number); setProgress(''); window.scrollTo({top: 0, behavior: 'smooth'}); }} style={{ display: 'flex', gap: '1rem', padding: '0.75rem', background: Number(episode) === ep.episode_number ? '#1a2540' : '#131b2f', border: '1px solid #1e293b', textAlign: 'left', color: '#f8fafc', cursor: 'pointer', borderRadius: '12px' }}>
+                      {ep.still_path ? <img src={`${TMDB_IMAGE_URL}/w342${ep.still_path}`} width="120" height="68" style={{objectFit:'cover', borderRadius: '8px'}} /> : <div style={{width: 120, height: 68, background:'#1e293b', borderRadius: '8px'}}></div>}
                       <div style={{ overflow: 'hidden' }}>
                         <h4 style={{ margin: '0 0 0.25rem 0' }}>{ep.episode_number}. {ep.name || 'TBA'}</h4>
-                        <p style={{ margin: 0, fontSize: '0.8rem', color: '#aaa', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{ep.overview || "No description."}</p>
+                        <p style={{ margin: 0, fontSize: '0.8rem', color: '#94a3b8', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{ep.overview || "No description."}</p>
                       </div>
                     </button>
                   ))}

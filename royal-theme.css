@@ -1,0 +1,78 @@
+/* royal-theme.css */
+:root {
+  --bg-base: #0B0F19; /* Deep space royal blue */
+  --bg-surface: #131B2F; /* Card backgrounds */
+  --bg-surface-hover: #1A2540;
+  --accent-royal: #4361EE; /* Comfy soft blue */
+  --accent-gold: #D4AF37; /* Royal gold */
+  --text-main: #F8FAFC;
+  --text-muted: #94A3B8;
+  --border-soft: #1E293B;
+}
+
+body, .selection-shell, .player-shell, .profile-shell, .watch-layout {
+  background-color: var(--bg-base) !important;
+  color: var(--text-main) !important;
+}
+
+/* Comfy Cards & Tiles */
+.poster-card, .profile-item, .stat-tile {
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--border-soft) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.poster-card:hover, .profile-item:hover, .stat-tile:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(67, 97, 238, 0.15) !important;
+  border-color: var(--accent-royal) !important;
+}
+
+/* Buttons */
+.secondary-button, .favorite-button, button.secondary-button {
+  background-color: var(--bg-surface) !important;
+  color: var(--text-main) !important;
+  border: 1px solid var(--border-soft) !important;
+  border-radius: 12px !important;
+  padding: 0.6rem 1.2rem !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer;
+}
+
+.secondary-button:hover, .favorite-button:hover {
+  background-color: var(--bg-surface-hover) !important;
+  border-color: var(--accent-royal) !important;
+  box-shadow: 0 0 12px rgba(67, 97, 238, 0.3) !important;
+}
+
+/* Royal Gold for active states / favorites */
+.secondary-button.is-active, .favorite-button.is-active {
+  background-color: rgba(212, 175, 55, 0.1) !important;
+  color: var(--accent-gold) !important;
+  border-color: var(--accent-gold) !important;
+  box-shadow: 0 0 15px rgba(212, 175, 55, 0.2) !important;
+}
+
+/* Inputs & Selects */
+input, select {
+  background-color: var(--bg-surface) !important;
+  color: var(--text-main) !important;
+  border: 1px solid var(--border-soft) !important;
+  border-radius: 12px !important;
+}
+
+input:focus, select:focus {
+  outline: none !important;
+  border-color: var(--accent-royal) !important;
+  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2) !important;
+}
+
+/* Typography Overrides */
+.eyebrow {
+  color: var(--accent-gold) !important;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}

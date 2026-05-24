@@ -824,40 +824,107 @@ async function autoFetchSubtitles(tmdbId, mediaType, season, episode) {
   if (!data.status || subs.length === 0) throw new Error("No English subtitles found.");
 
   // Bulletproof extraction of the ZIP download link from the JSON response
-  let zipUrl = "";
+  const zipUrls = [];
   const jsonStr = JSON.stringify(subs);
-  const match = jsonStr.match(/"url"\s*:\s*"([^"]+\.zip)"/i) || jsonStr.match(/"([^"]+\.zip)"/i);
-  if (match) zipUrl = match[1].replace(/\\/g, "");
-  else throw new Error("Could not parse subtitle download link from API response.");
-
-  zipUrl = zipUrl.startsWith('http') ? zipUrl : `https://dl.subdl.com${zipUrl.startsWith('/') ? '' : '/'}${zipUrl}`;
-
-  // Downloads the zip (Uses a CORS proxy fallback in case the download server blocks the browser)
-  let zipBuffer;
-  try {
-    const zipRes = await fetch(zipUrl);
-    if (!zipRes.ok) throw new Error();
-    zipBuffer = await zipRes.arrayBuffer();
-  } catch (e) {
-    try {
-      const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(zipUrl)}`;
-      const proxyRes = await fetch(proxyUrl);
-      if (!proxyRes.ok) throw new Error();
-      zipBuffer = await proxyRes.arrayBuffer();
-    } catch (e2) {
-      const fallbackProxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(zipUrl)}`;
-      const fallbackRes = await fetch(fallbackProxy);
-      if (!fallbackRes.ok) throw new Error("Network request blocked. Please use Manual Search.");
-      zipBuffer = await fallbackRes.arrayBuffer();
+  const regex = /"url"\s*:\s*"([^"]+\.zip)"/gi;
+  let match;
+  while ((match = regex.exec(jsonStr)) !== null) {
+    const url = match[1].replace(/\\/g, "");
+    if (!zipUrls.includes(url)) zipUrls.push(url);
+  }
+  
+  if (zipUrls.length === 0) {
+    const fallbackRegex = /"([^"]+\.zip)"/gi;
+    while ((match = fallbackRegex.exec(jsonStr)) !== null) {
+      const url = match[1].replace(/\\/g, "");
+      if (!zipUrls.includes(url)) zipUrls.push(url);
     }
+  }
+
+  if (zipUrls.length === 0) {
+    throw new Error("Could not parse subtitle download link from API response.");
+  }
+
+  let zipBuffer = null;
+
+  // Try up to 3 different subtitle URLs in case some are broken/blocked
+  for (const extractedUrl of zipUrls.slice(0, 3)) {
+    if (zipBuffer) break;
+
+    const path = extractedUrl.startsWith('/') ? extractedUrl : `/${extractedUrl}`;
+    const targetUrls = extractedUrl.startsWith('http') 
+      ? [
+          extractedUrl,
+          `https://corsproxy.io/?${encodeURIComponent(extractedUrl)}`,
+          `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(extractedUrl)}`,
+          `https://api.allorigins.win/raw?url=${encodeURIComponent(extractedUrl)}`
+        ]
+      : [
+          `https://dl.subdl.com${path}`,
+          `https://corsproxy.io/?${encodeURIComponent(`https://dl.subdl.com${path}`)}`,
+          `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(`https://dl.subdl.com${path}`)}`,
+          `https://subdl.com${path}`,
+          `https://corsproxy.io/?${encodeURIComponent(`https://subdl.com${path}`)}`,
+          `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://dl.subdl.com${path}`)}`
+        ];
+
+    for (const targetUrl of targetUrls) {
+      try {
+        const zipRes = await fetch(targetUrl);
+        if (!zipRes.ok) continue;
+        
+        const buffer = await zipRes.arrayBuffer();
+        const uint8 = new Uint8Array(buffer);
+        // Validate ZIP magic number (PK) to ensure it's not an HTML/JSON error page
+        if (uint8.length > 4 && uint8[0] === 0x50 && uint8[1] === 0x4B) {
+          zipBuffer = buffer;
+          break;
+        }
+      } catch (e) {
+        continue;
+      }
+    }
+  }
+
+  if (!zipBuffer) {
+    throw new Error("Subtitle archive was blocked or corrupted by the provider. Please use Manual Search.");
   }
 
   // Dynamically imports the fflate zip library to unpack the folder purely in memory
   const fflate = await import('https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js');
   const unzipped = fflate.unzipSync(new Uint8Array(zipBuffer));
 
-  const subFilename = Object.keys(unzipped).find(k => k.toLowerCase().endsWith('.srt') || k.toLowerCase().endsWith('.vtt'));
-  if (!subFilename) throw new Error("No valid subtitle file found inside the archive.");
+  const allValidFiles = Object.keys(unzipped).filter(k => 
+    !k.includes('__MACOSX') && 
+    (k.toLowerCase().endsWith('.srt') || k.toLowerCase().endsWith('.vtt'))
+  );
+  
+  if (allValidFiles.length === 0) throw new Error("No valid subtitle file found inside the archive.");
+
+  let subFilename = allValidFiles[0];
+
+  if (mediaType === "tv") {
+    const s = String(season).padStart(2, '0');
+    const e = String(episode).padStart(2, '0');
+    
+    const exactMatch = allValidFiles.find(f => {
+      const lower = f.toLowerCase();
+      return lower.includes(`s${s}e${e}`) || 
+             lower.includes(`s${season}e${episode}`) || 
+             lower.includes(`${season}x${e}`) ||
+             lower.includes(`${season}x${episode}`);
+    });
+    
+    if (exactMatch) {
+      subFilename = exactMatch;
+    } else {
+      const partialMatch = allValidFiles.find(f => {
+        const lower = f.toLowerCase();
+        return lower.includes(`e${e}`) || lower.includes(`-${e}`) || lower.includes(`episode ${e}`) || lower.includes(`ep${e}`);
+      });
+      if (partialMatch) subFilename = partialMatch;
+    }
+  }
 
   const subData = unzipped[subFilename];
   let text = new TextDecoder("utf-8").decode(subData);

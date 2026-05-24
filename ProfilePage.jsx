@@ -5,6 +5,7 @@ import {
   formatDuration, formatDate, getTitleFromEntry, toggleFavorite,
   FAVORITES_KEY, HISTORY_KEY, PROGRESS_KEY, WATCH_TIME_KEY
 } from './app.js';
+import './royal-theme.css';
 
 function ProfileList({ items, emptyText, allowRemove, forceRender }) {
   if (!items || items.length === 0) return <p className="empty-state">{emptyText}</p>;

@@ -5,6 +5,7 @@ import {
   formatTvTotals, fetchPopularCatalog, TMDB_CACHE_KEY, isFavorite, toggleFavorite,
   fetchTvStats, getSavedProgress, searchTmdb
 } from './app.js';
+import './royal-theme.css';
 
 function PosterCard({ item, catalogType, forceRender }) {
   const [stats, setStats] = useState('');
@@ -91,8 +92,8 @@ function GenreRow({ title, items, catalogType, forceRender }) {
     <div style={{ display: 'flex', flexDirection: 'column' }}>
       <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.25rem', color: '#fff' }}>{title}</h3>
       <div style={{ display: 'flex', gap: '18px', overflowX: 'auto', paddingBottom: '1rem', scrollSnapType: 'x mandatory' }}>
-        {items.map(item => (
-          <div key={item.id} style={{ flex: '0 0 170px', scrollSnapAlign: 'start' }}>
+        {items.map((item, idx) => (
+          <div key={`${item.id}-${idx}`} style={{ flex: '0 0 170px', scrollSnapAlign: 'start' }}>
             <PosterCard item={item} catalogType={catalogType} forceRender={forceRender} />
           </div>
         ))}
@@ -206,10 +207,10 @@ export default function SelectionPage() {
                 placeholder={`Search any ${catalogType === 'tv' ? 'TV Show' : 'Movie'}...`}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                style={{ padding: '0.6rem 1rem', borderRadius: '8px', border: '1px solid #333', background: '#111', color: '#fff', minWidth: '220px', fontSize: '1rem' }}
+                style={{ padding: '0.6rem 1rem', borderRadius: '12px', border: '1px solid #1e293b', background: '#131b2f', color: '#f8fafc', minWidth: '220px', fontSize: '1rem' }}
               />
             )}
-            <select value={selectedGenre} onChange={(e) => setSelectedGenre(e.target.value)} style={{ padding: '0.6rem 1rem', borderRadius: '8px', border: '1px solid #333', background: '#111', color: '#fff', fontSize: '1rem' }} disabled={!!searchQuery.trim()}>
+            <select value={selectedGenre} onChange={(e) => setSelectedGenre(e.target.value)} style={{ padding: '0.6rem 1rem', borderRadius: '12px', border: '1px solid #1e293b', background: '#131b2f', color: '#f8fafc', fontSize: '1rem' }} disabled={!!searchQuery.trim()}>
               <option value="">All Genres</option>
               {GENRE_MAP[catalogType].map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
             </select>
@@ -220,11 +221,11 @@ export default function SelectionPage() {
           <>
             <div className="poster-grid">
               {isSearching ? (
-                <p style={{ gridColumn: '1 / -1', padding: '2rem 0', color: '#aaa' }}>Searching...</p>
+                <p style={{ gridColumn: '1 / -1', padding: '2rem 0', color: '#94a3b8' }}>Searching...</p>
               ) : displayedItems.length > 0 ? (
-                displayedItems.map(item => <PosterCard key={item.id} item={item} catalogType={catalogType} forceRender={forceRender} />)
+                displayedItems.map((item, idx) => <PosterCard key={`${item.id}-${idx}`} item={item} catalogType={catalogType} forceRender={forceRender} />)
               ) : (
-                <p style={{ gridColumn: '1 / -1', padding: '2rem 0', color: '#aaa' }}>
+                <p style={{ gridColumn: '1 / -1', padding: '2rem 0', color: '#94a3b8' }}>
                   {searchQuery.trim() ? `No titles found for "${searchQuery}".` : "No titles found in this genre."}
                 </p>
               )}
@@ -255,7 +256,7 @@ export default function SelectionPage() {
             <h2>All {catalogType === 'tv' ? 'TV Shows' : 'Movies'}</h2>
           </div>
           <div className="poster-grid">
-            {displayedItems.map(item => <PosterCard key={item.id} item={item} catalogType={catalogType} forceRender={forceRender} />)}
+            {displayedItems.map((item, idx) => <PosterCard key={`${item.id}-${idx}`} item={item} catalogType={catalogType} forceRender={forceRender} />)}
           </div>
           {items.length > displayLimit && (
             <div style={{ display: 'flex', justifyContent: 'center', marginTop: '2rem' }}>
