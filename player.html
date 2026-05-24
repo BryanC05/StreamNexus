@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FreeVid - Player</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="player-shell">
+      <header class="player-topbar">
+        <a class="secondary-button" href="/">Home</a>
+        <div>
+          <p class="eyebrow" id="playerMeta">Vidking Player</p>
+          <h1 id="playerTitle">Player</h1>
+        </div>
+        <div class="header-actions">
+          <a class="secondary-button" href="profile.html">Profile</a>
+          <button id="favoritePlayer" class="secondary-button" type="button">Favorite</button>
+          <button id="reloadPreview" class="secondary-button" type="button">Reload</button>
+        </div>
+      </header>
+
+      <div class="player-frame-wrap" style="margin-bottom: 2rem; width: 100%;">
+        <iframe id="playerFrame" title="Vidking player" frameborder="0" allow="autoplay; fullscreen" allowfullscreen></iframe>
+      </div>
+
+      <section class="watch-layout" style="display: block;">
+        <aside class="player-sidebar" aria-label="Player options" style="max-width: 100%;">
+          <form class="control-grid" id="embedForm">
+            <fieldset class="mode-toggle">
+              <legend>Content Type</legend>
+              <label>
+                <input type="radio" name="mediaType" value="movie" checked>
+                <span>Movie</span>
+              </label>
+              <label>
+                <input type="radio" name="mediaType" value="tv">
+                <span>TV Series</span>
+              </label>
+            </fieldset>
+
+            <label class="field">
+              <span>Server Provider</span>
+              <select id="serverProvider">
+                <option value="https://vidsrc.me/embed">VidSrc.me (Most Reliable)</option>
+                <option value="https://vidsrc.in/embed">VidSrc.in</option>
+                <option value="https://vidsrc.pm/embed">VidSrc.pm</option>
+                <option value="https://www.vidking.net/embed">Vidking</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>TMDB ID</span>
+              <input id="tmdbId" type="number" min="1" inputmode="numeric" value="1078605" required>
+            </label>
+
+            <input id="season" type="hidden" value="1">
+            <input id="episode" type="hidden" value="8">
+
+            <label class="field">
+              <span>Primary Color</span>
+              <input id="color" type="color" value="#e50914">
+            </label>
+
+            <label class="field">
+              <span>Start Time</span>
+              <input id="progress" type="number" min="0" inputmode="numeric" placeholder="0">
+            </label>
+
+            <div class="field">
+              <span>Subtitles Helper</span>
+              <div style="display: flex; gap: 8px;">
+                <button id="autoFetchBtn" type="button" class="secondary-button" style="flex: 1;">Download</button>
+                <button id="findSubtitlesBtn" type="button" class="secondary-button" style="flex: 1;">Manual Search</button>
+              </div>
+              <p style="margin: 0; font-size: 0.8rem; color: var(--muted);">Instantly download subtitles, then upload them using the video player's CC button.</p>
+            </div>
+
+            <div class="switch-row">
+              <label class="switch">
+                <input id="autoPlay" type="checkbox">
+                <span>Autoplay</span>
+              </label>
+            </div>
+          </form>
+
+          <section class="output-stack" aria-label="Generated embed output">
+            <div class="output-header">
+              <h2>Generated URL</h2>
+              <button class="copy-button" type="button" data-copy-target="embedUrl">Copy</button>
+            </div>
+            <textarea id="embedUrl" readonly rows="2"></textarea>
+
+            <div class="output-header">
+              <h2>HTML Code</h2>
+              <button class="copy-button" type="button" data-copy-target="iframeCode">Copy</button>
+            </div>
+            <textarea id="iframeCode" readonly rows="5"></textarea>
+          </section>
+
+          <section class="events-panel" aria-label="Player events">
+            <div class="output-header">
+              <h2>Progress Events</h2>
+              <button id="clearEvents" class="secondary-button" type="button">Clear</button>
+            </div>
+            <pre id="eventLog" aria-live="polite">Waiting for player events...</pre>
+          </section>
+        </aside>
+      </section>
+    </main>
+
+    <script src="env.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

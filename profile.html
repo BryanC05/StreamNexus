@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FreeVid - Profile</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="profile-shell">
+      <header class="page-header">
+        <div>
+          <p class="eyebrow">FreeVid</p>
+          <h1>Profile</h1>
+        </div>
+        <div class="header-actions">
+          <a class="secondary-button" href="/">Home</a>
+          <button id="clearProfileData" class="secondary-button" type="button">Clear Data</button>
+        </div>
+      </header>
+
+      <section class="stats-grid" aria-label="Profile stats">
+        <article class="stat-tile">
+          <span id="favoriteCount">0</span>
+          <p>Favorites</p>
+        </article>
+        <article class="stat-tile">
+          <span id="historyCount">0</span>
+          <p>History</p>
+        </article>
+        <article class="stat-tile">
+          <span id="watchTimeTotal">0m</span>
+          <p>Watch Time</p>
+        </article>
+      </section>
+
+      <section class="profile-section" aria-label="Continue watching">
+        <div class="section-header">
+          <h2>Continue Watching</h2>
+          <p>Saved from player watch progress.</p>
+        </div>
+        <div class="profile-list" id="continueList"></div>
+      </section>
+
+      <section class="profile-section" aria-label="Favorite titles">
+        <div class="section-header">
+          <h2>Favorites</h2>
+          <p>Titles you saved from browse or player pages.</p>
+        </div>
+        <div class="profile-list" id="favoriteList"></div>
+      </section>
+
+      <section class="profile-section" aria-label="Watch history">
+        <div class="section-header">
+          <h2>History</h2>
+          <p>Recently opened and watched titles.</p>
+        </div>
+        <div class="profile-list" id="historyList"></div>
+      </section>
+    </main>
+
+    <script src="env.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
