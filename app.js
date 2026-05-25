@@ -4,7 +4,7 @@
 const TMDB_API_URL = "https://api.themoviedb.org/3";
 const TMDB_IMAGE_URL = "https://image.tmdb.org/t/p";
 const TMDB_CACHE_KEY = "freevid_tmdb_catalog_v2";
-const DEFAULT_TMDB_KEY = typeof window !== 'undefined' && window.ENV?.TMDB_API_KEY ? window.ENV.TMDB_API_KEY : "";
+const DEFAULT_TMDB_KEY = (typeof window !== 'undefined' && window.ENV?.TMDB_API_KEY) || (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_TMDB_API_KEY) || "";
 const FAVORITES_KEY = "freevid_favorites_v1";
 const HISTORY_KEY = "freevid_history_v1";
 const PROGRESS_KEY = "freevid_progress_v1";
@@ -788,7 +788,7 @@ async function fetchPopularCatalog(credential) {
 }
 
 async function autoFetchSubtitles(tmdbId, mediaType, season, episode) {
-  const apiKey = typeof window !== 'undefined' && window.ENV?.SUBDL_API_KEY ? window.ENV.SUBDL_API_KEY : "";
+  const apiKey = (typeof window !== 'undefined' && window.ENV?.SUBDL_API_KEY) || (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SUBDL_API_KEY) || "";
   if (!apiKey) throw new Error("SubDL API key not configured in env.js");
 
   const url = new URL("https://api.subdl.com/api/v1/subtitles");
