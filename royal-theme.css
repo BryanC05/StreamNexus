@@ -1,78 +1,614 @@
-/* royal-theme.css */
+/* royal-theme.css  —  Royal Dark Blue + Gold Strips · Theater Comfy */
+
+/* ── Theater Color System ── */
 :root {
-  --bg-base: #0B0F19; /* Deep space royal blue */
-  --bg-surface: #131B2F; /* Card backgrounds */
-  --bg-surface-hover: #1A2540;
-  --accent-royal: #4361EE; /* Comfy soft blue */
-  --accent-gold: #D4AF37; /* Royal gold */
-  --text-main: #F8FAFC;
-  --text-muted: #94A3B8;
-  --border-soft: #1E293B;
+  --curtain:       #0A0E1A;
+  --curtain-deep:  #050812;
+  --velvet:        #111927;
+  --velvet-soft:   #172034;
+  --velvet-hover:  #1A2542;
+  --gold:          #D4AF37;
+  --gold-light:    #F0C840;
+  --gold-muted:    #A0842B;
+  --gold-glow:     rgba(212, 175, 55, 0.12);
+  --gold-glow-strong: rgba(212, 175, 55, 0.25);
+  --gold-border:   rgba(212, 175, 55, 0.3);
+  --seats:         #1A1F2E;
+  --seats-hover:   #232A40;
+  --text-warm:     #F5F0E8;
+  --text-dim:      #8B7D6B;
+  --text-muted:    #6B5F4E;
+  --warm-glow:     rgba(212, 175, 55, 0.05);
 }
 
-body, .selection-shell, .player-shell, .profile-shell, .watch-layout {
-  background-color: var(--bg-base) !important;
-  color: var(--text-main) !important;
+/* ── Theater Walls ── */
+body {
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(212, 175, 55, 0.03) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 40% at 50% 100%, rgba(212, 175, 55, 0.04) 0%, transparent 70%),
+    linear-gradient(180deg, #0A0E1A 0%, #080B15 50%, #0A0E1A 100%) !important;
 }
 
-/* Comfy Cards & Tiles */
-.poster-card, .profile-item, .stat-tile {
-  background: var(--bg-surface) !important;
-  border: 1px solid var(--border-soft) !important;
-  border-radius: 16px !important;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+/* ── Gold Proscenium Arch (top gold strip with glow) ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 4px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    var(--gold-muted) 10%,
+    var(--gold) 30%,
+    var(--gold-light) 50%,
+    var(--gold) 70%,
+    var(--gold-muted) 90%,
+    transparent 100%
+  );
+  z-index: 9999;
+  box-shadow:
+    0 0 12px var(--gold-glow-strong),
+    0 0 40px rgba(212, 175, 55, 0.08);
 }
 
-.poster-card:hover, .profile-item:hover, .stat-tile:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 25px rgba(67, 97, 238, 0.15) !important;
-  border-color: var(--accent-royal) !important;
+/* ── Gold Apron Strip (bottom trim) ── */
+body::after {
+  content: '';
+  position: fixed;
+  inset: auto 0 0 0;
+  height: 3px;
+  background: linear-gradient(90deg,
+    transparent 5%,
+    var(--gold-muted) 15%,
+    var(--gold) 35%,
+    var(--gold-light) 50%,
+    var(--gold) 65%,
+    var(--gold-muted) 85%,
+    transparent 95%
+  );
+  z-index: 9999;
+  opacity: 0.5;
 }
 
-/* Buttons */
-.secondary-button, .favorite-button, button.secondary-button {
-  background-color: var(--bg-surface) !important;
-  color: var(--text-main) !important;
-  border: 1px solid var(--border-soft) !important;
-  border-radius: 12px !important;
-  padding: 0.6rem 1.2rem !important;
-  font-weight: 500 !important;
-  transition: all 0.2s ease !important;
-  cursor: pointer;
+/* ── Shell Pages — Theater Wings ── */
+.selection-shell,
+.player-shell,
+.profile-shell {
+  position: relative;
+  background: transparent !important;
 }
 
-.secondary-button:hover, .favorite-button:hover {
-  background-color: var(--bg-surface-hover) !important;
-  border-color: var(--accent-royal) !important;
-  box-shadow: 0 0 12px rgba(67, 97, 238, 0.3) !important;
+/* Gold vertical strips — like theater curtain edges */
+.selection-shell::before,
+.player-shell::before,
+.profile-shell::before {
+  content: '';
+  position: fixed;
+  top: 0; bottom: 0;
+  width: 2px;
+  background: linear-gradient(180deg,
+    transparent 0%,
+    var(--gold-muted) 15%,
+    var(--gold) 30%,
+    var(--gold-light) 50%,
+    var(--gold) 70%,
+    var(--gold-muted) 85%,
+    transparent 100%
+  );
+  z-index: 9998;
+  opacity: 0.4;
 }
 
-/* Royal Gold for active states / favorites */
-.secondary-button.is-active, .favorite-button.is-active {
-  background-color: rgba(212, 175, 55, 0.1) !important;
-  color: var(--accent-gold) !important;
-  border-color: var(--accent-gold) !important;
-  box-shadow: 0 0 15px rgba(212, 175, 55, 0.2) !important;
+.selection-shell::before,
+.player-shell::before,
+.profile-shell::before {
+  left: 0;
 }
 
-/* Inputs & Selects */
-input, select {
-  background-color: var(--bg-surface) !important;
-  color: var(--text-main) !important;
-  border: 1px solid var(--border-soft) !important;
-  border-radius: 12px !important;
+.selection-shell::after,
+.player-shell::after,
+.profile-shell::after {
+  content: '';
+  position: fixed;
+  top: 0; bottom: 0;
+  right: 0;
+  width: 2px;
+  background: linear-gradient(180deg,
+    transparent 0%,
+    var(--gold-muted) 15%,
+    var(--gold) 30%,
+    var(--gold-light) 50%,
+    var(--gold) 70%,
+    var(--gold-muted) 85%,
+    transparent 100%
+  );
+  z-index: 9998;
+  opacity: 0.4;
 }
 
-input:focus, select:focus {
-  outline: none !important;
-  border-color: var(--accent-royal) !important;
-  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2) !important;
+/* ── Page Header — Gold Trim ── */
+.page-header,
+.player-topbar {
+  position: relative;
+  padding-bottom: 16px !important;
+  margin-bottom: 32px !important;
 }
 
-/* Typography Overrides */
+.page-header::after,
+.player-topbar::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    var(--gold-muted) 10%,
+    var(--gold) 30%,
+    var(--gold-light) 50%,
+    var(--gold) 70%,
+    var(--gold-muted) 90%,
+    transparent 100%
+  );
+  border-radius: 1px;
+}
+
+/* ── Eyebrow — Gold Marquee Text ── */
 .eyebrow {
-  color: var(--accent-gold) !important;
-  letter-spacing: 1px;
-  text-transform: uppercase;
+  color: var(--gold-light) !important;
+  letter-spacing: 3px !important;
+  font-weight: 700 !important;
+  text-shadow: 0 0 20px rgba(212, 175, 55, 0.15);
+}
+
+/* ── Headings — Warm Theater Lighting ── */
+h1, h2, h3 {
+  color: var(--text-warm) !important;
+}
+
+/* ── Gold Accent on Catalog / Mode Toggle Active ── */
+.catalog-tabs input:checked + span,
+.mode-toggle input:checked + span {
+  border-color: var(--gold) !important;
+  background: linear-gradient(135deg, var(--gold-muted), var(--gold)) !important;
+  color: #0A0E1A !important;
+  font-weight: 800 !important;
+  box-shadow: 0 0 20px var(--gold-glow-strong);
+}
+
+.catalog-tabs span,
+.mode-toggle span {
+  background: var(--velvet) !important;
+  border-color: var(--border-soft, #1E293B) !important;
+  color: var(--text-dim) !important;
+  transition: all 0.25s ease;
+}
+
+.catalog-tabs span:hover,
+.mode-toggle span:hover {
+  border-color: var(--gold-border) !important;
+  color: var(--gold-light) !important;
+}
+
+/* ── TMDB Panel — Theater Lobby ── */
+.tmdb-panel {
+  background: linear-gradient(135deg, var(--velvet), var(--curtain-deep)) !important;
+  border: 1px solid var(--gold-border) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 30px rgba(0,0,0,0.3), inset 0 1px 0 rgba(212, 175, 55, 0.08);
+}
+
+/* ── Section Header — Gold Underline ── */
+.section-header {
+  position: relative;
+  padding-bottom: 12px;
+}
+
+.section-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0;
+  width: 80px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--gold), var(--gold-muted));
+  border-radius: 1px;
+}
+
+/* ── Cards — Velvet Seats ── */
+.poster-card {
+  background: linear-gradient(160deg, var(--velvet), var(--curtain-deep)) !important;
+  border: 1px solid var(--border-soft, #1E293B) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.03);
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  overflow: hidden;
+}
+
+.poster-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg,
+    transparent 10%,
+    var(--gold-border) 30%,
+    var(--gold) 50%,
+    var(--gold-border) 70%,
+    transparent 90%
+  );
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  z-index: 1;
+}
+
+.poster-card:hover::before {
+  opacity: 1;
+}
+
+.poster-card:hover {
+  transform: translateY(-6px) !important;
+  border-color: var(--gold-border) !important;
+  box-shadow:
+    0 12px 40px rgba(0,0,0,0.4),
+    0 0 30px var(--gold-glow),
+    inset 0 1px 0 rgba(212, 175, 55, 0.06) !important;
+}
+
+/* ── Poster Images — Gold Frame ── */
+.poster-media img {
+  border-color: var(--border-soft, #1E293B) !important;
+  border-radius: 12px !important;
+  background: #050812 !important;
+  transition: all 0.3s ease !important;
+}
+
+.poster-image-link:hover img {
+  border-color: var(--gold-border) !important;
+  box-shadow: 0 0 20px var(--gold-glow);
+  transform: translateY(-3px) !important;
+}
+
+/* ── Favorite Button — Gold Leaf ── */
+.favorite-button {
+  background: rgba(10, 14, 26, 0.85) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid var(--border-soft, #1E293B) !important;
+  border-radius: 10px !important;
+  color: var(--text-dim) !important;
+  font-weight: 600 !important;
+  transition: all 0.25s ease !important;
+}
+
+.favorite-button:hover {
+  border-color: var(--gold-border) !important;
+  color: var(--gold-light) !important;
+}
+
+.favorite-button.is-active {
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.12), rgba(212, 175, 55, 0.06)) !important;
+  color: var(--gold-light) !important;
+  border-color: var(--gold-border) !important;
+  box-shadow: 0 0 20px var(--gold-glow) !important;
+}
+
+/* ── Buttons — Velvet with Gold Trim ── */
+.secondary-button,
+button.secondary-button {
+  background: linear-gradient(160deg, var(--velvet), var(--curtain-deep)) !important;
+  color: var(--text-warm) !important;
+  border: 1px solid var(--border-soft, #1E293B) !important;
+  border-radius: 12px !important;
+  font-weight: 500 !important;
+  transition: all 0.25s ease !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.secondary-button:hover,
+button.secondary-button:hover {
+  border-color: var(--gold-border) !important;
+  box-shadow: 0 0 20px var(--gold-glow), 0 4px 12px rgba(0,0,0,0.3) !important;
+  color: var(--gold-light) !important;
+}
+
+.secondary-button.is-active {
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.12), rgba(212, 175, 55, 0.06)) !important;
+  color: var(--gold-light) !important;
+  border-color: var(--gold-border) !important;
+  box-shadow: 0 0 20px var(--gold-glow) !important;
+}
+
+/* ── Primary Link / CTA — Gold Leaf ── */
+.primary-link {
+  border-color: var(--gold) !important;
+  background: linear-gradient(135deg, var(--gold-muted), var(--gold)) !important;
+  color: #0A0E1A !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 15px var(--gold-glow-strong);
+}
+
+.primary-link:hover {
+  background: linear-gradient(135deg, var(--gold), var(--gold-light)) !important;
+  box-shadow: 0 6px 25px var(--gold-glow-strong);
+}
+
+/* ── Copy Button — Gold ── */
+.copy-button {
+  border-color: var(--gold) !important;
+  background: linear-gradient(135deg, var(--gold-muted), var(--gold)) !important;
+  color: #0A0E1A !important;
+  font-weight: 700 !important;
+}
+
+.copy-button:hover {
+  background: linear-gradient(135deg, var(--gold), var(--gold-light)) !important;
+}
+
+/* ── Profile Items / Stat Tiles — Theater Seats ── */
+.profile-item,
+.stat-tile {
+  background: linear-gradient(160deg, var(--velvet), var(--curtain-deep)) !important;
+  border: 1px solid var(--border-soft, #1E293B) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.03);
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.stat-tile span {
+  color: var(--gold-light) !important;
+  font-weight: 800 !important;
+}
+
+.profile-item:hover {
+  border-color: var(--gold-border) !important;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.35), 0 0 20px var(--gold-glow) !important;
+  transform: translateX(4px) !important;
+}
+
+/* ── Player Frame — Cinema Screen ── */
+.player-frame-wrap {
+  border-radius: 16px !important;
+  overflow: hidden !important;
+  border: 1px solid var(--border-soft, #1E293B) !important;
+  box-shadow:
+    0 8px 40px rgba(0,0,0,0.4),
+    0 0 60px rgba(212, 175, 55, 0.04) !important;
+  background: #050812 !important;
+  position: relative;
+}
+
+.player-frame-wrap::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg,
+    transparent 5%,
+    var(--gold-border) 20%,
+    var(--gold) 50%,
+    var(--gold-border) 80%,
+    transparent 95%
+  );
+  z-index: 2;
+  opacity: 0.7;
+}
+
+/* ── Watch Layout — Sidebar ── */
+.watch-layout {
+  border-color: var(--border-soft, #1E293B) !important;
+  border-radius: 16px !important;
+  overflow: hidden !important;
+  background: transparent !important;
+  box-shadow: 0 4px 25px rgba(0,0,0,0.3);
+}
+
+.player-sidebar {
+  background: linear-gradient(180deg, var(--velvet), var(--curtain-deep)) !important;
+}
+
+/* ── Event Log — Theater Console ── */
+#eventLog {
+  background: var(--curtain-deep) !important;
+  border-color: var(--border-soft, #1E293B) !important;
+  color: var(--gold-muted) !important;
+  border-radius: 12px !important;
+}
+
+/* ── Episode Items — Gold Trim on Active ── */
+.visual-season-select,
+select.visual-season-select {
+  background: var(--velvet) !important;
+  color: var(--text-warm) !important;
+  border: 1px solid var(--border-soft, #1E293B) !important;
+  border-radius: 12px !important;
+  padding: 0.5rem 1rem !important;
+  font-size: 1rem !important;
+}
+
+.visual-season-select:focus,
+select.visual-season-select:focus {
+  border-color: var(--gold-border) !important;
+  box-shadow: 0 0 15px var(--gold-glow) !important;
+  outline: none !important;
+}
+
+/* ── Inputs & Selects — Velvet Forms ── */
+input,
+select,
+textarea {
+  background: var(--velvet) !important;
+  color: var(--text-warm) !important;
+  border: 1px solid var(--border-soft, #1E293B) !important;
+  border-radius: 12px !important;
+  transition: all 0.25s ease !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--gold-border) !important;
+  box-shadow: 0 0 0 3px var(--gold-glow), 0 0 20px var(--gold-glow) !important;
+  outline: none !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-muted) !important;
+}
+
+/* ── Checkbox / Switch Accent ── */
+.switch input {
+  accent-color: var(--gold) !important;
+}
+
+input[type="search"] {
+  background: var(--velvet) !important;
+  color: var(--text-warm) !important;
+}
+
+/* ── Status / Muted Text ── */
+.status-line,
+.section-header p,
+.featured-content p,
+.poster-copy span,
+.empty-state,
+.field {
+  color: var(--text-dim) !important;
+}
+
+/* ── Field Labels ── */
+.field span {
+  color: var(--text-dim) !important;
+  font-weight: 500;
+}
+
+/* ── Scrollbar — Gold Trim ── */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--curtain-deep);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--seats);
+  border-radius: 4px;
+  border: 1px solid var(--gold-border);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--seats-hover);
+  border-color: var(--gold);
+}
+
+/* ── Genre Row Headers ── */
+.catalog-section h3 {
+  position: relative;
+  display: inline-block;
+  padding-bottom: 6px;
+}
+
+.catalog-section h3::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0;
+  width: 40px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--gold), transparent);
+  border-radius: 1px;
+}
+
+/* ── Load More Button ── */
+button.secondary-button[onclick*="displayLimit"] {
+  border-color: var(--gold-border) !important;
+  color: var(--gold-light) !important;
+  font-weight: 600 !important;
+}
+
+/* ── Episode Cards ── */
+div[style*="background: #1a2540"] {
+  background: rgba(212, 175, 55, 0.08) !important;
+  border-color: var(--gold-border) !important;
+}
+
+/* ── Empty States ── */
+p[style*="color: #94a3b8"] {
+  color: var(--text-dim) !important;
+}
+
+/* ── Episode Buttons ── */
+.episode-card-btn {
+  background: linear-gradient(160deg, var(--velvet), var(--curtain-deep)) !important;
+  border: 1px solid var(--border-soft, #1E293B) !important;
+  border-radius: 12px !important;
+  color: var(--text-warm) !important;
+  transition: all 0.25s ease !important;
+}
+
+.episode-card-btn:hover {
+  border-color: var(--gold-border) !important;
+  box-shadow: 0 0 15px var(--gold-glow) !important;
+}
+
+.episode-card-btn.is-active {
+  background: rgba(212, 175, 55, 0.08) !important;
+  border-color: var(--gold-border) !important;
+  box-shadow: 0 0 15px var(--gold-glow) !important;
+}
+
+.episode-card-btn img {
+  border-radius: 8px !important;
+}
+
+.episode-card-btn .placeholder-img {
+  background: var(--curtain-deep) !important;
+  border: 1px solid var(--border-soft, #1E293B) !important;
+  border-radius: 8px !important;
+  color: var(--text-muted) !important;
+}
+
+.episode-card-btn h4 {
+  color: var(--text-warm) !important;
+}
+
+.episode-card-btn p {
+  color: var(--text-dim) !important;
+}
+
+.episode-button {
+  background: linear-gradient(160deg, var(--velvet), var(--curtain-deep)) !important;
+  border: 1px solid var(--border-soft, #1E293B) !important;
+  border-radius: 12px !important;
+  color: var(--text-warm) !important;
+  transition: all 0.25s ease !important;
+  width: 100%;
+}
+
+.episode-button:hover {
+  border-color: var(--gold-border) !important;
+  box-shadow: 0 0 15px var(--gold-glow) !important;
+}
+
+.episode-button.is-active {
+  background: rgba(212, 175, 55, 0.08) !important;
+  border-color: var(--gold-border) !important;
+  box-shadow: 0 0 15px var(--gold-glow) !important;
+}
+
+.episode-placeholder {
+  background: var(--curtain-deep) !important;
+  border: 1px solid var(--border-soft, #1E293B);
+}
+
+/* ── Progress Events ── */
+pre {
+  background: var(--curtain-deep) !important;
+  border: 1px solid var(--border-soft, #1E293B) !important;
+  border-radius: 12px !important;
+  color: var(--gold-muted) !important;
+  padding: 1rem !important;
+}
+
+/* ── Smooth Theater Dimming ── */
+* {
+  transition: background-color 0.2s ease, border-color 0.25s ease, box-shadow 0.25s ease, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.2s ease;
 }

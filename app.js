@@ -801,45 +801,71 @@ async function autoFetchSubtitles(tmdbId, mediaType, season, episode) {
   }
   url.searchParams.set("languages", "EN");
 
-  let data;
-  try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error();
-    data = await res.json();
-  } catch (e) {
+  const targetApiUrls = [
+    url.toString(),
+    `https://corsproxy.io/?${encodeURIComponent(url.toString())}`,
+    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url.toString())}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(url.toString())}`
+  ];
+
+  let data = null;
+  for (const targetUrl of targetApiUrls) {
     try {
-      const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url.toString())}`;
-      const proxyRes = await fetch(proxyUrl);
-      if (!proxyRes.ok) throw new Error();
-      data = await proxyRes.json();
-    } catch (e2) {
-      const fallbackProxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(url.toString())}`;
-      const fallbackRes = await fetch(fallbackProxy);
-      if (!fallbackRes.ok) throw new Error("Failed to reach SubDL API. Please try Manual Search.");
-      data = await fallbackRes.json();
+      const res = await fetch(targetUrl);
+      if (!res.ok) continue;
+      const json = await res.json();
+      // Basic validation to ensure the proxy didn't return an HTML error page
+      if (json && (json.subtitles || json.results || json.status !== undefined)) {
+        data = json;
+        break;
+      }
+    } catch (e) {
+      continue; // Suppress "Failed to fetch" network errors and try the next proxy
     }
+  }
+
+  if (!data) {
+    throw new Error("Failed to reach the SubDL API (Network or CORS blocked). Please use Manual Search.");
   }
 
   const subs = data.subtitles || data.results || [];
   if (!data.status || subs.length === 0) throw new Error("No English subtitles found.");
 
-  // Bulletproof extraction of the ZIP download link from the JSON response
-  const zipUrls = [];
-  const jsonStr = JSON.stringify(subs);
-  const regex = /"url"\s*:\s*"([^"]+\.zip)"/gi;
-  let match;
-  while ((match = regex.exec(jsonStr)) !== null) {
-    const url = match[1].replace(/\\/g, "");
-    if (!zipUrls.includes(url)) zipUrls.push(url);
-  }
+  // Intelligently prioritize WEB-DL / WEBRip releases since those match streaming sites
+  const preferredZipUrls = [];
+  const otherZipUrls = [];
   
-  if (zipUrls.length === 0) {
-    const fallbackRegex = /"([^"]+\.zip)"/gi;
-    while ((match = fallbackRegex.exec(jsonStr)) !== null) {
+  for (const sub of subs) {
+    const subStr = JSON.stringify(sub);
+    const isWebRip = subStr.toLowerCase().includes("web") || subStr.toLowerCase().includes("nf") || subStr.toLowerCase().includes("amzn") || subStr.toLowerCase().includes("hulu");
+    
+    const regex = /"url"\s*:\s*"([^"]+\.zip)"/gi;
+    let match;
+    let found = false;
+    while ((match = regex.exec(subStr)) !== null) {
       const url = match[1].replace(/\\/g, "");
-      if (!zipUrls.includes(url)) zipUrls.push(url);
+      if (isWebRip) {
+        if (!preferredZipUrls.includes(url)) preferredZipUrls.push(url);
+      } else {
+        if (!otherZipUrls.includes(url)) otherZipUrls.push(url);
+      }
+      found = true;
+    }
+    
+    if (!found) {
+      const fallbackRegex = /"([^"]+\.zip)"/gi;
+      while ((match = fallbackRegex.exec(subStr)) !== null) {
+        const url = match[1].replace(/\\/g, "");
+        if (isWebRip) {
+          if (!preferredZipUrls.includes(url)) preferredZipUrls.push(url);
+        } else {
+          if (!otherZipUrls.includes(url)) otherZipUrls.push(url);
+        }
+      }
     }
   }
+
+  const zipUrls = [...preferredZipUrls, ...otherZipUrls];
 
   if (zipUrls.length === 0) {
     throw new Error("Could not parse subtitle download link from API response.");
@@ -929,10 +955,81 @@ async function autoFetchSubtitles(tmdbId, mediaType, season, episode) {
   const subData = unzipped[subFilename];
   let text = new TextDecoder("utf-8").decode(subData);
 
-  if (!text.startsWith("WEBVTT")) {
+  // Normalize line endings to prevent parser issues on different operating systems
+  text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+  // Remove sequential SRT line numbers (digits on a single line immediately preceding a timestamp)
+  // Replacing with \n\n guarantees we don't accidentally swallow the blank line separating cues.
+  text = text.replace(/(^|\n)\s*\d+\s*\n(?=[ \t]*\d{2,}:\d{2}:\d{2})/g, '\n\n');
+
+  // Enforce a strict blank line before every timestamp to prevent WebVTT cues from merging and displaying all at once
+  text = text.replace(/([^\n])\n(?=[ \t]*\d{2,}:\d{2}:\d{2})/g, '$1\n\n');
+
+  // Strip HTML styling tags which often cause web players to merge words together
+  text = text.replace(/<\/?(?:i|b|u|font|color)[^>]*>/gi, '');
+
+  const isVtt = text.startsWith("WEBVTT");
+
+  // Add a trailing space to dialogue lines. This prevents words from combining 
+  // when custom video players (like Vidking) blindly strip newlines to render subtitles.
+  const lines = text.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].trim() !== '' && !lines[i].includes('-->') && !lines[i].startsWith('WEBVTT')) {
+      lines[i] = lines[i] + ' ';
+    }
+  }
+  text = lines.join('\n');
+
+  if (!isVtt) {
     text = "WEBVTT\n\n" + text.replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, "$1.$2");
   }
+
   return text;
+}
+
+async function uploadSubtitleToTempHost(text, filename) {
+  const file = new File([text], filename, { type: "text/vtt" });
+
+  // Primary: Litterbox via CORS Proxy (keeps file for 12 hours)
+  try {
+    const formData = new FormData();
+    formData.append("reqtype", "fileupload");
+    formData.append("time", "12h");
+    formData.append("fileToUpload", file);
+
+    const res = await fetch(`https://corsproxy.io/?${encodeURIComponent("https://litterbox.catbox.moe/user/api.php")}`, {
+      method: "POST",
+      body: formData
+    });
+    if (res.ok) {
+      const url = await res.text();
+      if (url.startsWith("http")) return url.trim();
+    }
+  } catch (e) {
+    console.error("Litterbox upload via proxy failed:", e);
+  }
+
+  // Secondary: tmpfiles.org directly (has native CORS, keeps file for 60 minutes)
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    
+    const res = await fetch("https://tmpfiles.org/api/v1/upload", {
+      method: "POST",
+      body: formData
+    });
+    if (res.ok) {
+      const json = await res.json();
+      if (json?.data?.url) {
+        // tmpfiles returns a viewer link. We must inject /dl/ to get the raw file download link.
+        return json.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
+      }
+    }
+  } catch (e) {
+    console.error("tmpfiles upload failed:", e);
+  }
+
+  throw new Error("All temporary hosting services failed or were blocked by CORS.");
 }
 
 // ==========================================
@@ -1136,6 +1233,7 @@ function buildEmbedUrl() {
   const colorInput = document.querySelector("#color");
   const progressInput = document.querySelector("#progress");
   const autoPlayInput = document.querySelector("#autoPlay");
+  const subUrlInput = document.querySelector("#subUrl");
   const tmdbId = cleanNumber(tmdbIdInput.value, 1078605);
   const params = new URLSearchParams();
   const color = colorInput.value.replace("#", "");
@@ -1159,6 +1257,11 @@ function buildEmbedUrl() {
 
   if (Number.isFinite(progress) && progress > 0) {
     params.set("progress", String(progress));
+  }
+
+  if (subUrlInput && subUrlInput.value) {
+    params.set("sub_url", subUrlInput.value);
+    params.set("sub_default", "true");
   }
 
   const query = params.toString();
@@ -1686,7 +1789,7 @@ function initPlayerPage() {
   async function runAutoFetch(silent = false) {
     if (!autoFetchBtn) return;
     try {
-      autoFetchBtn.textContent = "Downloading...";
+      autoFetchBtn.textContent = "Fetching...";
       autoFetchBtn.disabled = true;
       const text = await autoFetchSubtitles(tmdbIdInput.value.trim(), getMediaType(), seasonInput.value, episodeInput.value);
       
@@ -1706,16 +1809,11 @@ function initPlayerPage() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      if (serverProviderInput) {
-        serverProviderInput.value = "https://www.vidking.net/embed";
-      }
-      writeStore(SERVER_KEY, "https://www.vidking.net/embed");
-      updateOutputs({ refreshFrame: true });
-      if (!silent) alert("Subtitle downloaded successfully! \n\nPlease click the 'CC' button inside the video player and select 'Upload' to apply it.");
+      if (!silent) alert("Subtitle downloaded successfully! \n\nIf your current player supports it (like Vidking or VidSrc.pm), click the 'CC' button to upload.");
     } catch (err) {
       if (!silent) alert(`Error: ${err.message}`);
     } finally {
-      autoFetchBtn.textContent = "Download Subtitles";
+      autoFetchBtn.textContent = "Auto-Fetch Subtitles";
       autoFetchBtn.disabled = false;
     }
   }
@@ -1877,4 +1975,5 @@ export {
   formatTvTotals, getYear, getImageUrl, normalizeMovie, normalizeTv,
   fetchTvStats, getTmdbHeaders, getTmdbUrl, fetchTmdbPage,
   fetchTmdbPages, fetchPopularCatalog, searchTmdb, autoFetchSubtitles,
+  uploadSubtitleToTempHost
 };
