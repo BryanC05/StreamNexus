@@ -1,0 +1,94 @@
+{
+  "users": {
+    "testuser": {
+      "username": "testuser",
+      "passwordHash": "$2b$10$5oYJVrIn4nnuua8nCrd24uAg8V5D9SZg9eFOhFp7.yvP2r89RWn7i",
+      "favorites": [],
+      "history": [],
+      "progress": {},
+      "watchTime": 0,
+      "createdAt": "2026-06-08T07:08:49.523Z"
+    },
+    "bece": {
+      "username": "bece",
+      "passwordHash": "$2b$10$CrX.CJKJlDocqZPA.o7SbOytT4/RbAQV10qh1/DfSX83ICqoxhl4O",
+      "favorites": [
+        {
+          "id": "1339713",
+          "mediaType": "movie",
+          "title": "Obsession",
+          "year": "2026",
+          "poster": "https://image.tmdb.org/t/p/w342/bRwnj8WEKBCvmfeUNOukJPwB43K.jpg",
+          "backdrop": "https://image.tmdb.org/t/p/w1280/5lTZyuBTNOfawsfPT8Q0cIg6qAF.jpg",
+          "season": 1,
+          "episode": 1,
+          "totalSeasons": 0,
+          "totalEpisodes": 0,
+          "genreIds": [
+            27,
+            53
+          ],
+          "savedAt": 1780902629910
+        },
+        {
+          "id": "79744",
+          "mediaType": "tv",
+          "title": "The Rookie",
+          "year": "2018",
+          "poster": "https://image.tmdb.org/t/p/w342/70kTz0OmjjZe7zHvIDrq2iKW7PJ.jpg",
+          "backdrop": "https://image.tmdb.org/t/p/w1280/6iNWfGVCEfASDdlNb05TP5nG0ll.jpg",
+          "season": 1,
+          "episode": 1,
+          "totalSeasons": 0,
+          "totalEpisodes": 0,
+          "genreIds": [
+            80,
+            18,
+            35
+          ],
+          "savedAt": 1780902706058
+        },
+        {
+          "id": "124364",
+          "mediaType": "tv",
+          "title": "FROM",
+          "year": "2022",
+          "poster": "https://image.tmdb.org/t/p/w342/pRtJagIxpfODzzb0T0NAvZSzErC.jpg",
+          "backdrop": "https://image.tmdb.org/t/p/w1280/xLdw1xdHocKYFFvx7w41NchXMfJ.jpg",
+          "season": 1,
+          "episode": 1,
+          "totalSeasons": 0,
+          "totalEpisodes": 0,
+          "genreIds": [
+            9648,
+            18,
+            10765
+          ],
+          "savedAt": 1780902711141
+        },
+        {
+          "id": "220102",
+          "mediaType": "tv",
+          "title": "Spider-Noir",
+          "year": "2026",
+          "poster": "https://image.tmdb.org/t/p/w342/oD8WSVqz84ZRfelkr7JPeJwR9Iv.jpg",
+          "backdrop": "https://image.tmdb.org/t/p/w1280/6t2FvBr9DS8MOq0m5FAwPBCdAW5.jpg",
+          "season": 1,
+          "episode": 1,
+          "totalSeasons": 0,
+          "totalEpisodes": 0,
+          "genreIds": [
+            80,
+            18,
+            9648
+          ],
+          "savedAt": 1780902712675
+        }
+      ],
+      "history": [],
+      "progress": {},
+      "watchTime": 0,
+      "createdAt": "2026-06-08T07:09:33.513Z"
+    }
+  }
+}

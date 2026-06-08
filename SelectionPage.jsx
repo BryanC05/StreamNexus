@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   DEFAULT_TMDB_KEY, getCachedCatalog, getActiveCatalog, catalog,
   formatTvTotals, fetchPopularCatalog, TMDB_CACHE_KEY, isFavorite, toggleFavorite,
-  fetchTvStats, getSavedProgress, searchTmdb
+  fetchTvStats, getSavedProgress, searchTmdb, getUsername, isLoggedIn
 } from './app.js';
 import './royal-theme.css';
 
@@ -175,7 +175,9 @@ export default function SelectionPage() {
         <div><p className="eyebrow">FreeVid</p><h1>Choose What to Watch</h1></div>
         <div className="header-actions">
           <Link className="secondary-button" to="/">Home</Link>
-          <Link className="secondary-button" to="/profile">Profile</Link>
+          <Link className="secondary-button" to="/profile">
+            {isLoggedIn() ? `👤 ${getUsername()}` : 'Profile'}
+          </Link>
           <fieldset className="catalog-tabs">
             <legend>Catalog Type</legend>
             <label><input type="radio" checked={catalogType === 'movie'} onChange={() => { setCatalogType('movie'); setSearchQuery(''); setSelectedGenre(''); }} /><span>Movies</span></label>

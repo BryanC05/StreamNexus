@@ -533,6 +533,7 @@ function toggleFavorite(entry) {
     : [{ ...normalized, savedAt: Date.now() }, ...favorites];
 
   writeStore(FAVORITES_KEY, next);
+  if (isLoggedIn()) apiSyncPush().catch(() => {});
   return !exists;
 }
 
@@ -582,6 +583,7 @@ function saveProgress(entry, playerData) {
   };
   writeStore(PROGRESS_KEY, store);
   saveHistory(normalized);
+  if (isLoggedIn()) throttledSyncPush();
 }
 
 function getSavedProgress(entry) {
@@ -1964,6 +1966,136 @@ document.addEventListener("DOMContentLoaded", () => {
   initProfilePage();
 });
 
+// ==========================================
+// JWT AUTH & SYNC INTEGRATION
+// ==========================================
+const TOKEN_KEY = "freevid_token_v1";
+const USERNAME_KEY = "freevid_username_v1";
+
+function getToken() {
+  return readStore(TOKEN_KEY, "");
+}
+
+function getUsername() {
+  return readStore(USERNAME_KEY, "");
+}
+
+function isLoggedIn() {
+  return !!getToken();
+}
+
+function logout() {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USERNAME_KEY);
+  localStorage.removeItem(FAVORITES_KEY);
+  localStorage.removeItem(HISTORY_KEY);
+  localStorage.removeItem(PROGRESS_KEY);
+  localStorage.removeItem(WATCH_TIME_KEY);
+}
+
+async function apiRegister(username, password) {
+  const response = await fetch('/api/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password })
+  });
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error || 'Registration failed');
+  }
+  const data = await response.json();
+  writeStore(TOKEN_KEY, data.token);
+  writeStore(USERNAME_KEY, data.username);
+  await apiSyncPush();
+  return data;
+}
+
+async function apiLogin(username, password) {
+  const response = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password })
+  });
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error || 'Login failed');
+  }
+  const data = await response.json();
+  writeStore(TOKEN_KEY, data.token);
+  writeStore(USERNAME_KEY, data.username);
+  await apiSyncPull();
+  return data;
+}
+
+async function apiSyncPull() {
+  if (!isLoggedIn()) return;
+  try {
+    const response = await fetch('/api/user/sync', {
+      headers: { 'Authorization': `Bearer ${getToken()}` }
+    });
+    if (!response.ok) return;
+    const data = await response.json();
+    
+    if (data.favorites) writeStore(FAVORITES_KEY, data.favorites);
+    if (data.history) writeStore(HISTORY_KEY, data.history);
+    if (data.progress) writeStore(PROGRESS_KEY, data.progress);
+    if (data.watchTime !== undefined) writeStore(WATCH_TIME_KEY, data.watchTime);
+  } catch (err) {
+    console.warn('Sync pull failed:', err);
+  }
+}
+
+async function apiSyncPush() {
+  if (!isLoggedIn()) return;
+  try {
+    const favorites = readStore(FAVORITES_KEY, []);
+    const history = readStore(HISTORY_KEY, []);
+    const progress = readStore(PROGRESS_KEY, {});
+    const watchTime = readStore(WATCH_TIME_KEY, 0);
+
+    const response = await fetch('/api/user/sync', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${getToken()}`
+      },
+      body: JSON.stringify({ favorites, history, progress, watchTime })
+    });
+    if (!response.ok) return;
+    const data = await response.json();
+    
+    if (data.favorites) writeStore(FAVORITES_KEY, data.favorites);
+    if (data.history) writeStore(HISTORY_KEY, data.history);
+    if (data.progress) writeStore(PROGRESS_KEY, data.progress);
+    if (data.watchTime !== undefined) writeStore(WATCH_TIME_KEY, data.watchTime);
+  } catch (err) {
+    console.warn('Sync push failed:', err);
+  }
+}
+
+async function apiClearCloud() {
+  if (!isLoggedIn()) return;
+  try {
+    await fetch('/api/user/clear', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${getToken()}` }
+    });
+  } catch (err) {
+    console.warn('Clear cloud failed:', err);
+  }
+}
+
+let syncTimeout = null;
+function throttledSyncPush() {
+  if (!isLoggedIn()) return;
+  if (syncTimeout) return;
+  
+  syncTimeout = setTimeout(async () => {
+    syncTimeout = null;
+    await apiSyncPush();
+  }, 10000);
+}
+
 export {
   TMDB_API_URL, TMDB_IMAGE_URL, TMDB_CACHE_KEY, DEFAULT_TMDB_KEY,
   FAVORITES_KEY, HISTORY_KEY, PROGRESS_KEY, WATCH_TIME_KEY, SERVER_KEY,
@@ -1975,5 +2107,8 @@ export {
   formatTvTotals, getYear, getImageUrl, normalizeMovie, normalizeTv,
   fetchTvStats, getTmdbHeaders, getTmdbUrl, fetchTmdbPage,
   fetchTmdbPages, fetchPopularCatalog, searchTmdb, autoFetchSubtitles,
-  uploadSubtitleToTempHost
+  uploadSubtitleToTempHost,
+  
+  getToken, getUsername, isLoggedIn, logout, apiRegister, apiLogin,
+  apiSyncPull, apiSyncPush, apiClearCloud
 };
