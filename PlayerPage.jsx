@@ -25,6 +25,8 @@ export default function PlayerPage() {
   const [autoPlay, setAutoPlay] = useState(false);
   const [subUrl, setSubUrl] = useState(params.get('sub_url') || '');
   const [subtitleBlobUrl, setSubtitleBlobUrl] = useState('');
+  const [subtitleText, setSubtitleText] = useState('');
+  const [subtitleOffset, setSubtitleOffset] = useState(0);
   const [customVideoUrl, setCustomVideoUrl] = useState('');
 
   const [playerMeta, setPlayerMeta] = useState(mediaType === 'tv' ? `TV Series - TMDB ${tmdbId}` : `Movie - TMDB ${tmdbId}`);
@@ -35,6 +37,72 @@ export default function PlayerPage() {
   const videoRef = useRef(null);
   const [isFetchingSubs, setIsFetchingSubs] = useState(false);
   const [renderTrigger, setRenderTrigger] = useState(0);
+  const [lightsOut, setLightsOut] = useState(false);
+
+  // Helper functions to parse, format, and shift WebVTT timestamps
+  const parseVttTimestamp = (tStr) => {
+    const parts = tStr.trim().split(':');
+    let hrs = 0, mins = 0, secs = 0;
+    if (parts.length === 3) {
+      hrs = parseFloat(parts[0]);
+      mins = parseFloat(parts[1]);
+      secs = parseFloat(parts[2]);
+    } else if (parts.length === 2) {
+      mins = parseFloat(parts[0]);
+      secs = parseFloat(parts[1]);
+    }
+    return hrs * 3600 + mins * 60 + secs;
+  };
+
+  const formatVttTimestamp = (seconds) => {
+    if (seconds < 0) seconds = 0;
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    const ms = Math.floor((seconds % 1) * 1000);
+    return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${String(ms).padStart(3, '0')}`;
+  };
+
+  const shiftVttLine = (line, offset) => {
+    const parts = line.split('-->');
+    if (parts.length !== 2) return line;
+    
+    const startStr = parts[0].trim();
+    const rest = parts[1].trim().split(/\s+/);
+    const endStr = rest[0];
+    const settings = rest.slice(1).join(' ');
+    
+    const startTime = parseVttTimestamp(startStr);
+    const endTime = parseVttTimestamp(endStr);
+    
+    const newStartStr = formatVttTimestamp(startTime + offset);
+    const newEndStr = formatVttTimestamp(endTime + offset);
+    
+    return `${newStartStr} --> ${newEndStr}${settings ? ' ' + settings : ''}`;
+  };
+
+  const shiftWebVttText = (text, offset) => {
+    if (offset === 0) return text;
+    return text.split('\n').map(line => {
+      if (line.includes('-->')) {
+        return shiftVttLine(line, offset);
+      }
+      return line;
+    }).join('\n');
+  };
+
+  const normalizeSubtitleText = (rawText) => {
+    let text = rawText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    text = text.replace(/(^|\n)\s*\d+\s*\n(?=[ \t]*\d{2,}:\d{2}:\d{2})/g, '\n\n');
+    text = text.replace(/([^\n])\n(?=[ \t]*\d{2,}:\d{2}:\d{2})/g, '$1\n\n');
+    text = text.replace(/<\/?(?:i|b|u|font|color)[^>]*>/gi, '');
+    
+    const isVtt = text.startsWith("WEBVTT");
+    if (!isVtt) {
+      text = "WEBVTT\n\n" + text.replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, "$1.$2");
+    }
+    return text;
+  };
 
   const getCurrentEntry = useCallback(() => {
     return getTitleFromEntry({ id: tmdbId, mediaType, title, season, episode });
@@ -56,10 +124,31 @@ export default function PlayerPage() {
   }, [getCurrentEntry]);
 
   useEffect(() => {
+    if (!lightsOut) return;
+    const handleEsc = (e) => { if (e.key === 'Escape') setLightsOut(false); };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [lightsOut]);
+
+  useEffect(() => {
     return () => {
       if (subtitleBlobUrl) URL.revokeObjectURL(subtitleBlobUrl);
     };
   }, [subtitleBlobUrl]);
+
+  // Effect to process and generate new subtitle blobs when text or offset changes
+  useEffect(() => {
+    if (!subtitleText) return;
+    
+    const shiftedText = shiftWebVttText(subtitleText, subtitleOffset);
+    const blob = new Blob([shiftedText], { type: 'text/vtt' });
+    const newUrl = URL.createObjectURL(blob);
+    
+    setSubtitleBlobUrl(prev => {
+      if (prev) URL.revokeObjectURL(prev);
+      return newUrl;
+    });
+  }, [subtitleText, subtitleOffset]);
 
   // Effect to securely hot-swap subtitles in the Custom HTML5 Video Player
   useEffect(() => {
@@ -82,7 +171,6 @@ export default function PlayerPage() {
     track.label = 'English (Synced)';
     track.srclang = 'en';
     track.src = subtitleBlobUrl;
-    track.default = true;
     
     video.appendChild(track);
     track.addEventListener('load', () => { if (track.track) track.track.mode = 'showing'; });
@@ -124,10 +212,8 @@ export default function PlayerPage() {
           alert("Subtitle auto-apply failed. Downloaded locally instead! \n\nPlease upload it manually using the 'CC' button.");
         }
       } else {
-        const blob = new Blob([text], { type: 'text/vtt' });
-        const newUrl = URL.createObjectURL(blob);
-        if (subtitleBlobUrl) URL.revokeObjectURL(subtitleBlobUrl);
-        setSubtitleBlobUrl(newUrl);
+        setSubtitleText(text);
+        setSubtitleOffset(0);
         alert("Subtitles automatically generated and applied to your custom player!");
       }
     } catch (err) {
@@ -198,24 +284,26 @@ export default function PlayerPage() {
   };
 
   return (
-    <main className="player-shell">
+    <main className={`player-shell ${lightsOut ? 'lights-out' : ''}`}>
+      {lightsOut && <div className="lights-out-overlay" onClick={() => setLightsOut(false)} />}
       <header className="player-topbar">
         <Link className="secondary-button" to="/">Home</Link>
         <div><p className="eyebrow">{playerMeta}</p><h1>{title}</h1></div>
         <div className="header-actions">
+          <button className={`secondary-button ${lightsOut ? 'is-active' : ''}`} onClick={() => setLightsOut(lo => !lo)} title="Toggle Lights Out mode">💡 Lights {lightsOut ? 'On' : 'Out'}</button>
           <button className={`secondary-button ${isFav ? 'is-active' : ''}`} onClick={() => { toggleFavorite(getCurrentEntry()); setRenderTrigger(x => x+1); }}>{isFav ? 'Saved' : 'Favorite'}</button>
         </div>
       </header>
 
       {server === 'custom' ? (
-        <div className="player-frame-wrap" style={{ marginBottom: '2rem', width: '100%' }}>
-          <video ref={videoRef} controls autoPlay={autoPlay} style={{ width: '100%', height: '600px', outline: 'none' }} src={customVideoUrl} onTimeUpdate={handleVideoTimeUpdate} onLoadedMetadata={handleVideoLoaded}>
+        <div className="player-frame-wrap">
+          <video ref={videoRef} controls autoPlay={autoPlay} className="player-video" src={customVideoUrl} onTimeUpdate={handleVideoTimeUpdate} onLoadedMetadata={handleVideoLoaded}>
             Your browser does not support the video tag.
           </video>
         </div>
       ) : (
-        <div className="player-frame-wrap" style={{ marginBottom: '2rem', width: '100%' }}>
-          <iframe src={finalUrl} title="Player" frameBorder="0" allow="autoplay; fullscreen" allowFullScreen style={{width:'100%', height:'600px'}}></iframe>
+        <div className="player-frame-wrap">
+          <iframe src={finalUrl} title="Player" frameBorder="0" allow="autoplay; fullscreen" allowFullScreen className="player-iframe"></iframe>
         </div>
       )}
 
@@ -237,14 +325,45 @@ export default function PlayerPage() {
               </select>
             </label>
             {server === 'custom' && (
-              <label className="field" style={{ gridColumn: '1 / -1' }}><span>Custom Video Source (Local File or Direct URL)</span>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <input type="text" placeholder="https://example.com/video.mp4" value={customVideoUrl} onChange={e => setCustomVideoUrl(e.target.value)} style={{ flex: 1 }} />
-                  <input type="file" accept="video/*" onChange={e => {
-                    if (e.target.files.length > 0) setCustomVideoUrl(URL.createObjectURL(e.target.files[0]));
-                  }} style={{ flex: 1 }} />
+              <>
+                <label className="field" style={{ gridColumn: '1 / -1' }}><span>Custom Video Source (Local File or Direct URL)</span>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <input type="text" placeholder="https://example.com/video.mp4" value={customVideoUrl} onChange={e => setCustomVideoUrl(e.target.value)} style={{ flex: 1 }} />
+                    <input type="file" accept="video/*" onChange={e => {
+                      if (e.target.files.length > 0) setCustomVideoUrl(URL.createObjectURL(e.target.files[0]));
+                    }} style={{ flex: 1 }} />
+                  </div>
+                </label>
+                <label className="field" style={{ gridColumn: '1 / -1' }}><span>Upload Custom Subtitle File (SRT or VTT)</span>
+                  <input type="file" accept=".vtt,.srt" onChange={e => {
+                    if (e.target.files.length > 0) {
+                      const file = e.target.files[0];
+                      const reader = new FileReader();
+                      reader.onload = (evt) => {
+                        const normalized = normalizeSubtitleText(evt.target.result);
+                        setSubtitleText(normalized);
+                        setSubtitleOffset(0);
+                        alert("Custom subtitle loaded successfully!");
+                      };
+                      reader.readAsText(file);
+                    }
+                  }} />
+                </label>
+                <div className="field" style={{ gridColumn: '1 / -1' }}>
+                  <span>Subtitle Sync / Delay Controls</span>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <button type="button" className="secondary-button" onClick={() => setSubtitleOffset(prev => prev - 1.0)}>-1.0s</button>
+                    <button type="button" className="secondary-button" onClick={() => setSubtitleOffset(prev => prev - 0.5)}>-0.5s</button>
+                    <span style={{ flex: 1, textAlign: 'center', fontWeight: 'bold', fontSize: '1rem', color: 'var(--gold-light)' }}>
+                      Offset: {subtitleOffset > 0 ? `+${subtitleOffset.toFixed(1)}` : `${subtitleOffset.toFixed(1)}`}s
+                    </span>
+                    <button type="button" className="secondary-button" onClick={() => setSubtitleOffset(prev => prev + 0.5)}>+0.5s</button>
+                    <button type="button" className="secondary-button" onClick={() => setSubtitleOffset(prev => prev + 1.0)}>+1.0s</button>
+                    <button type="button" className="secondary-button" onClick={() => setSubtitleOffset(0)}>Reset</button>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.8rem' }}>Adjust timings if the subtitles start too early or late relative to the audio.</p>
                 </div>
-              </label>
+              </>
             )}
             <label className="field"><span>TMDB ID</span><input type="number" value={tmdbId} onChange={e => setTmdbId(e.target.value)} /></label>
             <label className="field"><span>Start Time</span><input type="number" value={progress} onChange={e => setProgress(e.target.value)} /></label>
