@@ -38,6 +38,9 @@ export default function PlayerPage() {
   const [isFetchingSubs, setIsFetchingSubs] = useState(false);
   const [renderTrigger, setRenderTrigger] = useState(0);
   const [lightsOut, setLightsOut] = useState(false);
+  const [movieDuration, setMovieDuration] = useState(7200); // default 2 hours (in seconds)
+  const [tvDuration, setTvDuration] = useState(2700); // default 45 mins (in seconds)
+  const localTimeRef = useRef(0);
 
   // Helper functions to parse, format, and shift WebVTT timestamps
   const parseVttTimestamp = (tStr) => {
@@ -122,6 +125,38 @@ export default function PlayerPage() {
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
   }, [getCurrentEntry]);
+
+  // Sync localTimeRef with saved progress when current media entry changes
+  useEffect(() => {
+    const saved = getSavedProgress(getCurrentEntry());
+    localTimeRef.current = saved?.currentTime || Number(params.get('progress') || 0);
+  }, [getCurrentEntry, params]);
+
+  // Local interval tracker to estimate playback progress on third-party cross-origin iframes
+  useEffect(() => {
+    if (server === 'custom') return;
+
+    const saved = getSavedProgress(getCurrentEntry());
+    localTimeRef.current = saved?.currentTime || Number(params.get('progress') || 0);
+
+    const interval = setInterval(() => {
+      if (document.hidden) return;
+
+      localTimeRef.current += 5; // increment by 5s
+
+      const duration = mediaType === 'tv' ? tvDuration : movieDuration;
+      const progressPercent = (localTimeRef.current / duration) * 100;
+
+      // Save progress to local storage and update history
+      saveProgress(getCurrentEntry(), {
+        currentTime: localTimeRef.current,
+        duration: duration,
+        progress: progressPercent
+      });
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [server, mediaType, tvDuration, movieDuration, getCurrentEntry, params]);
 
   useEffect(() => {
     if (!lightsOut) return;
@@ -232,6 +267,21 @@ export default function PlayerPage() {
         if (data.seasons) setTvSeasons(data.seasons);
         if (data.number_of_seasons) setPlayerMeta(`${data.number_of_seasons} Seasons | ${data.number_of_episodes} Episodes`);
         if (data.name) setTitle(data.name);
+        if (data.episode_run_time && data.episode_run_time.length > 0) {
+          setTvDuration(data.episode_run_time[0] * 60);
+        }
+      });
+  }, [tmdbId, mediaType]);
+
+  useEffect(() => {
+    if (mediaType !== 'movie' || !DEFAULT_TMDB_KEY) return;
+    fetch(`${TMDB_API_URL}/movie/${tmdbId}?language=en-US&api_key=${DEFAULT_TMDB_KEY}`, { headers: getTmdbHeaders(DEFAULT_TMDB_KEY) })
+      .then(res => res.json())
+      .then(data => {
+        if (data.runtime) {
+          setMovieDuration(data.runtime * 60);
+        }
+        if (data.title) setTitle(data.title);
       });
   }, [tmdbId, mediaType]);
 
@@ -380,12 +430,24 @@ export default function PlayerPage() {
 
           {mediaType === 'tv' && (
             <div id="episodeListContainer" style={{ width: '100%', marginTop: '2rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                <h3>Episodes</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h3>Episodes</h3>
+                </div>
                 {tvSeasons.length > 0 && (
-                  <select className="visual-season-select" value={season} onChange={e => { setSeason(e.target.value); setEpisode(1); setProgress(''); }}>
-                    {tvSeasons.filter(s => s.season_number > 0).map(s => <option key={s.season_number} value={s.season_number}>Season {s.season_number}</option>)}
-                  </select>
+                  <div className="season-tabs-container" style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px', width: '100%', scrollSnapType: 'x mandatory' }}>
+                    {tvSeasons.filter(s => s.season_number > 0).map(s => (
+                      <button 
+                        key={s.season_number}
+                        type="button"
+                        className={`secondary-button ${Number(season) === s.season_number ? 'is-active' : ''}`}
+                        style={{ flex: '0 0 auto', scrollSnapAlign: 'start', minHeight: '38px', padding: '0 18px', fontSize: '0.85rem' }}
+                        onClick={() => { setSeason(s.season_number); setEpisode(1); setProgress(''); }}
+                      >
+                        Season {s.season_number}
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
 

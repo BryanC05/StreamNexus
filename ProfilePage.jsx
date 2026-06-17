@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   getFavorites, getHistory, getProgressStore, getGlobalWatchTime,
   formatDuration, formatDate, getTitleFromEntry, toggleFavorite,
@@ -33,6 +33,7 @@ function ProfileList({ items, emptyText, allowRemove, forceRender }) {
 }
 
 export default function ProfilePage() {
+  const navigate = useNavigate();
   const [trigger, setTrigger] = useState(0);
   const forceRender = () => setTrigger(x => x + 1);
 
@@ -80,11 +81,11 @@ export default function ProfilePage() {
   // Auth Guard Screen
   if (!isLoggedIn()) {
     return (
-      <main className="profile-shell" style={{ display: 'grid', placeItems: 'center', minHeight: '80vh' }}>
-        <article className="tmdb-panel" style={{ display: 'block', width: '100%', maxWidth: '450px', padding: '2.5rem' }}>
+      <main className="profile-shell" onClick={() => navigate('/')} style={{ display: 'grid', placeItems: 'center', minHeight: '80vh' }}>
+        <article className="auth-parchment-scroll" onClick={(e) => e.stopPropagation()} style={{ display: 'block', width: '100%', maxWidth: '450px', padding: '2.5rem' }}>
           <header style={{ textAlign: 'center', marginBottom: '2rem' }}>
             <p className="eyebrow">StreamNexus Cinema</p>
-            <h1>{authMode === 'login' ? 'Sign In' : 'Join Us'}</h1>
+            <h1 className="auth-card-title">{authMode === 'login' ? 'Sign In' : 'Join Us'}</h1>
             <p style={{ margin: '0.5rem 0 0', fontSize: '0.9rem', color: 'var(--text-dim)' }}>
               Sync your watch history and favorites to the cloud.
             </p>
@@ -127,7 +128,7 @@ export default function ProfilePage() {
               <button 
                 type="button" 
                 onClick={() => { setAuthMode(authMode === 'login' ? 'register' : 'login'); setAuthError(''); }} 
-                style={{ background: 'none', border: 'none', color: 'var(--gold)', textDecoration: 'underline', padding: 0, minHeight: 'auto', display: 'inline' }}
+                style={{ background: 'none', border: 'none', color: 'var(--gold)', textDecoration: 'underline', padding: 0, minHeight: 'auto', display: 'inline', cursor: 'pointer' }}
               >
                 {authMode === 'login' ? 'Create an account' : 'Sign in here'}
               </button>

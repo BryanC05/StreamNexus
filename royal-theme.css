@@ -1,56 +1,76 @@
-/* royal-theme.css  —  Royal Dark Blue + Gold Strips · Theater Comfy */
+/* ==========================================================================
+   METAPHOR: REFANTAZIO THEME - ROYAL EUCHRONIAN CINEMA INTERFACE
+   ========================================================================== */
 
-/* ── Theater Color System ── */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@600;700;800;900&family=Oswald:wght@400;500;600;700&family=Spectral:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Pirata+One&display=swap');
+
 :root {
-  --curtain:       #0A0E1A;
-  --curtain-deep:  #050812;
-  --velvet:        #111927;
-  --velvet-soft:   #172034;
-  --velvet-hover:  #1A2542;
-  --gold:          #D4AF37;
-  --gold-light:    #F0C840;
-  --gold-muted:    #A0842B;
-  --gold-glow:     rgba(212, 175, 55, 0.12);
-  --gold-glow-strong: rgba(212, 175, 55, 0.25);
-  --gold-border:   rgba(212, 175, 55, 0.3);
-  --seats:         #1A1F2E;
-  --seats-hover:   #232A40;
-  --text-warm:     #F5F0E8;
-  --text-dim:      #8B7D6B;
-  --text-muted:    #6B5F4E;
-  --warm-glow:     rgba(212, 175, 55, 0.05);
+  /* Core Metaphor Palette */
+  --ink-dark:          #080a0e;
+  --ink-deep:          #030406;
+  --canvas-bg:         #0c0f16;
+  --metaphor-gold:     #f5c21a;
+  --metaphor-gold-lt:  #ffec63;
+  --metaphor-gold-dk:  #b38b0d;
+  --metaphor-red:      #d91e1e;
+  --metaphor-red-hover:#ff2b2b;
+  --metaphor-red-glow: rgba(217, 30, 30, 0.25);
+  --metaphor-gold-glow:rgba(245, 194, 26, 0.15);
+  --parchment:         #ede6da;
+  --parchment-dim:     #a89f90;
+  --parchment-dark:    #181c25;
+  --panel-bg:          #111622;
+  --panel-hover:       #182030;
+  --border-gold:       rgba(245, 194, 26, 0.3);
+  --border-gold-strong:rgba(245, 194, 26, 0.75);
+  
+  /* Overrides for main app variables */
+  --bg:                #0c0f16;
+  --panel:             #111622;
+  --panel-soft:        #182030;
+  --border:            rgba(245, 194, 26, 0.2);
+  --text:              #ede6da;
+  --muted:             #a89f90;
+  --accent:            #f5c21a;
+  --accent-strong:     #ffec63;
+  --focus:             #f5c21a;
 }
 
-/* ── Theater Walls ── */
+/* Base Body Styles - Canvas Backdrop with Ink Splatters & Paint Strokes */
 body {
-  background:
-    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(212, 175, 55, 0.03) 0%, transparent 70%),
-    radial-gradient(ellipse 60% 40% at 50% 100%, rgba(212, 175, 55, 0.04) 0%, transparent 70%),
-    linear-gradient(180deg, #0A0E1A 0%, #080B15 50%, #0A0E1A 100%) !important;
+  background-color: var(--ink-dark) !important;
+  background-image: 
+    radial-gradient(ellipse 70% 60% at 50% 10%, rgba(217, 30, 30, 0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 50% at 80% 80%, rgba(245, 194, 26, 0.03) 0%, transparent 60%),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200' opacity='0.08'><filter id='noise'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23noise)'/></svg>"),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100%' height='100%' viewBox='0 0 100 100' preserveAspectRatio='none' opacity='0.1'><circle cx='10' cy='20' r='1.5' fill='%23d91e1e'/><circle cx='85' cy='45' r='2.5' fill='%23f5c21a'/><circle cx='70' cy='85' r='1.2' fill='%23ede6da'/><path d='M-10,30 Q30,10 60,40 T110,20 L110,25 Q70,45 30,15 T-10,35 Z' fill='%23d91e1e' opacity='0.4'/><path d='M20,-10 Q50,30 90,0 T120,40 L120,45 Q80,5 50,35 T20,-5 Z' fill='%23f5c21a' opacity='0.2'/></svg>") !important;
+  color: var(--parchment) !important;
+  font-family: 'Spectral', serif !important;
+  overflow-x: hidden;
 }
 
-/* ── Gold Proscenium Arch (top gold strip with glow) ── */
+/* ── Proscenium Arch (Top Gold Trim & Crown Motif) ── */
 body::before {
   content: '';
   position: fixed;
   inset: 0 0 auto 0;
-  height: 4px;
+  height: 5px;
   background: linear-gradient(90deg,
     transparent 0%,
-    var(--gold-muted) 10%,
-    var(--gold) 30%,
-    var(--gold-light) 50%,
-    var(--gold) 70%,
-    var(--gold-muted) 90%,
+    var(--metaphor-gold-dk) 15%,
+    var(--metaphor-gold) 35%,
+    var(--metaphor-gold-lt) 50%,
+    var(--metaphor-gold) 65%,
+    var(--metaphor-gold-dk) 85%,
     transparent 100%
   );
   z-index: 9999;
   box-shadow:
-    0 0 12px var(--gold-glow-strong),
-    0 0 40px rgba(212, 175, 55, 0.08);
+    0 0 15px var(--metaphor-gold-glow),
+    0 0 35px rgba(245, 194, 26, 0.1);
 }
 
-/* ── Gold Apron Strip (bottom trim) ── */
+/* ── Bottom Ribbon ── */
 body::after {
   content: '';
   position: fixed;
@@ -58,575 +78,752 @@ body::after {
   height: 3px;
   background: linear-gradient(90deg,
     transparent 5%,
-    var(--gold-muted) 15%,
-    var(--gold) 35%,
-    var(--gold-light) 50%,
-    var(--gold) 65%,
-    var(--gold-muted) 85%,
+    var(--metaphor-red) 30%,
+    var(--metaphor-gold) 50%,
+    var(--metaphor-red) 70%,
     transparent 95%
   );
   z-index: 9999;
-  opacity: 0.5;
+  opacity: 0.8;
 }
 
-/* ── Shell Pages — Theater Wings ── */
+/* ── Shell Pages Layout ── */
 .selection-shell,
 .player-shell,
 .profile-shell {
   position: relative;
   background: transparent !important;
+  padding: 40px 24px !important;
+  animation: page-fade-in 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
 }
 
-/* Gold vertical strips — like theater curtain edges */
-.selection-shell::before,
-.player-shell::before,
-.profile-shell::before {
-  content: '';
-  position: fixed;
-  top: 0; bottom: 0;
-  width: 2px;
-  background: linear-gradient(180deg,
-    transparent 0%,
-    var(--gold-muted) 15%,
-    var(--gold) 30%,
-    var(--gold-light) 50%,
-    var(--gold) 70%,
-    var(--gold-muted) 85%,
-    transparent 100%
-  );
-  z-index: 9998;
-  opacity: 0.4;
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
-.selection-shell::before,
-.player-shell::before,
-.profile-shell::before {
-  left: 0;
-}
 
-.selection-shell::after,
-.player-shell::after,
-.profile-shell::after {
-  content: '';
-  position: fixed;
-  top: 0; bottom: 0;
-  right: 0;
-  width: 2px;
-  background: linear-gradient(180deg,
-    transparent 0%,
-    var(--gold-muted) 15%,
-    var(--gold) 30%,
-    var(--gold-light) 50%,
-    var(--gold) 70%,
-    var(--gold-muted) 85%,
-    transparent 100%
-  );
-  z-index: 9998;
-  opacity: 0.4;
-}
 
-/* ── Page Header — Gold Trim ── */
+/* ── Header Typography & Navigation ── */
 .page-header,
 .player-topbar {
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: space-between !important;
+  align-items: flex-end !important;
+  border-bottom: 2px solid var(--metaphor-gold-dk) !important;
+  padding-bottom: 24px !important;
+  margin-bottom: 40px !important;
   position: relative;
-  padding-bottom: 16px !important;
-  margin-bottom: 32px !important;
+  background: linear-gradient(180deg, rgba(17,22,34,0.4) 0%, transparent 100%);
+  border-radius: 8px 8px 0 0;
 }
 
 .page-header::after,
 .player-topbar::after {
   content: '';
   position: absolute;
-  bottom: 0; left: 0; right: 0;
-  height: 2px;
-  background: linear-gradient(90deg,
-    transparent 0%,
-    var(--gold-muted) 10%,
-    var(--gold) 30%,
-    var(--gold-light) 50%,
-    var(--gold) 70%,
-    var(--gold-muted) 90%,
-    transparent 100%
-  );
-  border-radius: 1px;
+  bottom: -4px; left: 0;
+  width: 35%;
+  height: 6px;
+  background: var(--metaphor-red);
+  clip-path: polygon(0 0, 100% 0, 92% 100%, 0 100%);
 }
 
-/* ── Eyebrow — Gold Marquee Text ── */
 .eyebrow {
-  color: var(--gold-light) !important;
-  letter-spacing: 3px !important;
+  font-family: 'Oswald', sans-serif !important;
+  font-size: 0.85rem !important;
   font-weight: 700 !important;
-  text-shadow: 0 0 20px rgba(212, 175, 55, 0.15);
+  letter-spacing: 5px !important;
+  color: var(--metaphor-red) !important;
+  text-shadow: 0 0 10px rgba(217,30,30,0.3);
+  text-transform: uppercase !important;
+  margin-bottom: 4px !important;
 }
 
-/* ── Headings — Warm Theater Lighting ── */
-h1, h2, h3 {
-  color: var(--text-warm) !important;
+h1 {
+  font-family: 'Cinzel', serif !important;
+  font-size: clamp(2rem, 4vw, 3.4rem) !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.5px !important;
+  color: var(--parchment) !important;
+  text-shadow: 2px 2px 0px rgba(0,0,0,0.8), 0 0 20px var(--metaphor-gold-glow) !important;
 }
 
-/* ── Gold Accent on Catalog / Mode Toggle Active ── */
-.catalog-tabs input:checked + span,
-.mode-toggle input:checked + span {
-  border-color: var(--gold) !important;
-  background: linear-gradient(135deg, var(--gold-muted), var(--gold)) !important;
-  color: #0A0E1A !important;
+h2 {
+  font-family: 'Cinzel Decorative', 'Cinzel', serif !important;
+  color: var(--metaphor-gold-lt) !important;
   font-weight: 800 !important;
-  box-shadow: 0 0 20px var(--gold-glow-strong);
+  text-shadow: 1px 1px 0px #000;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-.catalog-tabs span,
-.mode-toggle span {
-  background: var(--velvet) !important;
-  border-color: var(--border-soft, #1E293B) !important;
-  color: var(--text-dim) !important;
-  transition: all 0.25s ease;
+h2::before {
+  content: '✦';
+  color: var(--metaphor-red);
+  font-size: 1.15rem;
 }
 
-.catalog-tabs span:hover,
-.mode-toggle span:hover {
-  border-color: var(--gold-border) !important;
-  color: var(--gold-light) !important;
+h3 {
+  font-family: 'Cinzel', serif !important;
+  color: var(--parchment) !important;
+  letter-spacing: 1px;
 }
 
-/* ── TMDB Panel — Theater Lobby ── */
-.tmdb-panel {
-  background: linear-gradient(135deg, var(--velvet), var(--curtain-deep)) !important;
-  border: 1px solid var(--gold-border) !important;
-  border-radius: 16px !important;
-  box-shadow: 0 4px 30px rgba(0,0,0,0.3), inset 0 1px 0 rgba(212, 175, 55, 0.08);
-}
-
-/* ── Section Header — Gold Underline ── */
+/* ── Ornate Section Headers with Splatters ── */
 .section-header {
   position: relative;
-  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-gold) !important;
+  padding-bottom: 14px !important;
+  margin-bottom: 28px !important;
 }
 
 .section-header::after {
   content: '';
   position: absolute;
-  bottom: 0; left: 0;
-  width: 80px;
+  bottom: -1px; left: 0;
+  width: 140px;
   height: 2px;
-  background: linear-gradient(90deg, var(--gold), var(--gold-muted));
-  border-radius: 1px;
+  background: var(--metaphor-red);
 }
 
-/* ── Cards — Velvet Seats ── */
-.poster-card {
-  background: linear-gradient(160deg, var(--velvet), var(--curtain-deep)) !important;
-  border: 1px solid var(--border-soft, #1E293B) !important;
-  border-radius: 16px !important;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.03);
-  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1) !important;
+.section-header p {
+  font-family: 'Spectral', serif;
+  font-style: italic;
+  font-size: 0.95rem;
+  color: var(--parchment-dim) !important;
+}
+
+/* ── Menu Buttons & Action Links - The "Diagonal Cut" Skewed Look ── */
+.secondary-button,
+button.secondary-button,
+.primary-link,
+button.favorite-button,
+.header-actions button {
+  font-family: 'Oswald', sans-serif !important;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-weight: 600 !important;
+  font-size: 0.9rem !important;
+  min-height: 42px !important;
+  padding: 0 22px !important;
+  border: 1px solid var(--metaphor-gold-dk) !important;
+  background: linear-gradient(135deg, #111622 0%, #1a202d 100%) !important;
+  color: var(--parchment) !important;
+  border-radius: 0px !important;
+  transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+  box-shadow: 3px 3px 0px rgba(0,0,0,0.7) !important;
+  position: relative;
   overflow: hidden;
 }
 
-.poster-card::before {
+.secondary-button::before,
+button.secondary-button::before,
+.primary-link::before,
+.header-actions button::before {
   content: '';
   position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 2px;
-  background: linear-gradient(90deg,
-    transparent 10%,
-    var(--gold-border) 30%,
-    var(--gold) 50%,
-    var(--gold-border) 70%,
-    transparent 90%
-  );
-  opacity: 0;
-  transition: opacity 0.35s ease;
-  z-index: 1;
-}
-
-.poster-card:hover::before {
-  opacity: 1;
-}
-
-.poster-card:hover {
-  transform: translateY(-6px) !important;
-  border-color: var(--gold-border) !important;
-  box-shadow:
-    0 12px 40px rgba(0,0,0,0.4),
-    0 0 30px var(--gold-glow),
-    inset 0 1px 0 rgba(212, 175, 55, 0.06) !important;
-}
-
-/* ── Poster Images — Gold Frame ── */
-.poster-media img {
-  border-color: var(--border-soft, #1E293B) !important;
-  border-radius: 12px !important;
-  background: #050812 !important;
-  transition: all 0.3s ease !important;
-}
-
-.poster-image-link:hover img {
-  border-color: var(--gold-border) !important;
-  box-shadow: 0 0 20px var(--gold-glow);
-  transform: translateY(-3px) !important;
-}
-
-/* ── Favorite Button — Gold Leaf ── */
-.favorite-button {
-  background: rgba(10, 14, 26, 0.85) !important;
-  backdrop-filter: blur(12px) !important;
-  border: 1px solid var(--border-soft, #1E293B) !important;
-  border-radius: 10px !important;
-  color: var(--text-dim) !important;
-  font-weight: 600 !important;
-  transition: all 0.25s ease !important;
-}
-
-.favorite-button:hover {
-  border-color: var(--gold-border) !important;
-  color: var(--gold-light) !important;
-}
-
-.favorite-button.is-active {
-  background: linear-gradient(135deg, rgba(212, 175, 55, 0.12), rgba(212, 175, 55, 0.06)) !important;
-  color: var(--gold-light) !important;
-  border-color: var(--gold-border) !important;
-  box-shadow: 0 0 20px var(--gold-glow) !important;
-}
-
-/* ── Buttons — Velvet with Gold Trim ── */
-.secondary-button,
-button.secondary-button {
-  background: linear-gradient(160deg, var(--velvet), var(--curtain-deep)) !important;
-  color: var(--text-warm) !important;
-  border: 1px solid var(--border-soft, #1E293B) !important;
-  border-radius: 12px !important;
-  font-weight: 500 !important;
-  transition: all 0.25s ease !important;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  top: 0; left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+  transition: left 0.4s ease;
 }
 
 .secondary-button:hover,
-button.secondary-button:hover {
-  border-color: var(--gold-border) !important;
-  box-shadow: 0 0 20px var(--gold-glow), 0 4px 12px rgba(0,0,0,0.3) !important;
-  color: var(--gold-light) !important;
+button.secondary-button:hover,
+.header-actions button:hover {
+  background: var(--metaphor-red) !important;
+  border-color: var(--metaphor-gold) !important;
+  color: #fff !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 5px 5px 0px rgba(0,0,0,0.8), 0 0 10px var(--metaphor-red-glow) !important;
 }
 
-.secondary-button.is-active {
-  background: linear-gradient(135deg, rgba(212, 175, 55, 0.12), rgba(212, 175, 55, 0.06)) !important;
-  color: var(--gold-light) !important;
-  border-color: var(--gold-border) !important;
-  box-shadow: 0 0 20px var(--gold-glow) !important;
+.secondary-button:hover::before,
+button.secondary-button:hover::before,
+.header-actions button:hover::before {
+  left: 100%;
 }
 
-/* ── Primary Link / CTA — Gold Leaf ── */
+.secondary-button:active,
+button.secondary-button:active,
+.header-actions button:active {
+  transform: translateY(1px) !important;
+  box-shadow: 1px 1px 0px rgba(0,0,0,0.9) !important;
+}
+
+/* Primary Link (Golden Highlight Buttons like Login) */
 .primary-link {
-  border-color: var(--gold) !important;
-  background: linear-gradient(135deg, var(--gold-muted), var(--gold)) !important;
-  color: #0A0E1A !important;
+  background: linear-gradient(135deg, var(--metaphor-gold-dk) 0%, var(--metaphor-gold) 100%) !important;
+  border-color: var(--metaphor-gold-lt) !important;
+  color: #030406 !important;
   font-weight: 700 !important;
-  box-shadow: 0 4px 15px var(--gold-glow-strong);
+  box-shadow: 4px 4px 0px rgba(217, 30, 30, 0.7) !important;
 }
 
 .primary-link:hover {
-  background: linear-gradient(135deg, var(--gold), var(--gold-light)) !important;
-  box-shadow: 0 6px 25px var(--gold-glow-strong);
+  background: linear-gradient(135deg, var(--metaphor-red) 0%, var(--metaphor-red-hover) 100%) !important;
+  border-color: var(--metaphor-gold-lt) !important;
+  color: #fff !important;
+  box-shadow: 5px 5px 0px rgba(245, 194, 26, 0.7) !important;
 }
 
-/* ── Copy Button — Gold ── */
-.copy-button {
-  border-color: var(--gold) !important;
-  background: linear-gradient(135deg, var(--gold-muted), var(--gold)) !important;
-  color: #0A0E1A !important;
+/* Active tab style */
+.secondary-button.is-active,
+button.secondary-button.is-active {
+  background: var(--metaphor-red) !important;
+  border-color: var(--metaphor-gold) !important;
+  color: #fff !important;
+  box-shadow: 4px 4px 0px rgba(0,0,0,0.8), inset 0 0 8px rgba(0,0,0,0.5) !important;
   font-weight: 700 !important;
 }
 
-.copy-button:hover {
-  background: linear-gradient(135deg, var(--gold), var(--gold-light)) !important;
+/* ── Selection Screen Toggle (Movies vs TV Shows Tabs) ── */
+.catalog-tabs,
+.mode-toggle {
+  display: flex !important;
+  gap: 12px !important;
+  background: rgba(3,4,6,0.5) !important;
+  border: 1px solid var(--border-gold) !important;
+  padding: 6px !important;
+  border-radius: 0px !important;
+  box-shadow: inset 0 2px 8px rgba(0,0,0,0.8);
 }
 
-/* ── Profile Items / Stat Tiles — Theater Seats ── */
-.profile-item,
-.stat-tile {
-  background: linear-gradient(160deg, var(--velvet), var(--curtain-deep)) !important;
-  border: 1px solid var(--border-soft, #1E293B) !important;
-  border-radius: 16px !important;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.03);
-  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1) !important;
+.catalog-tabs label,
+.mode-toggle label {
+  flex: 1;
 }
 
-.stat-tile span {
-  color: var(--gold-light) !important;
-  font-weight: 800 !important;
+.catalog-tabs span,
+.mode-toggle span {
+  font-family: 'Oswald', sans-serif !important;
+  font-size: 0.85rem !important;
+  font-weight: 700 !important;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  min-height: 38px !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  color: var(--parchment-dim) !important;
+  cursor: pointer;
+  transition: all 0.2s ease !important;
 }
 
-.profile-item:hover {
-  border-color: var(--gold-border) !important;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.35), 0 0 20px var(--gold-glow) !important;
-  transform: translateX(4px) !important;
+.catalog-tabs label:hover span,
+.mode-toggle label:hover span {
+  color: var(--metaphor-gold-lt) !important;
+  background: rgba(245, 194, 26, 0.05) !important;
 }
 
-/* ── Player Frame — Cinema Screen ── */
-.player-frame-wrap {
-  border-radius: 16px !important;
-  overflow: hidden !important;
-  border: 1px solid var(--border-soft, #1E293B) !important;
-  box-shadow:
-    0 8px 40px rgba(0,0,0,0.4),
-    0 0 60px rgba(212, 175, 55, 0.04) !important;
-  background: #050812 !important;
+.catalog-tabs input:checked + span,
+.mode-toggle input:checked + span {
+  background: linear-gradient(135deg, var(--metaphor-red) 0%, #a81212 100%) !important;
+  color: #fff !important;
+  border: 1px solid var(--metaphor-gold) !important;
+  box-shadow: 0 0 10px var(--metaphor-red-glow), inset 0 1px 0 rgba(255,255,255,0.2) !important;
+  font-weight: 700 !important;
+}
+
+/* ── Search Input & Select Dropdowns ── */
+input[type="search"],
+input[type="text"],
+input[type="password"],
+input[type="number"],
+input[type="url"] {
+  font-family: 'Spectral', serif !important;
+  background-color: #0b0e14 !important;
+  border: 1px solid var(--metaphor-gold-dk) !important;
+  border-radius: 0px !important;
+  color: var(--parchment) !important;
+  padding: 10px 16px !important;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.8);
+  transition: all 0.25s ease !important;
+}
+
+select {
+  font-family: 'Spectral', serif !important;
+  background-color: #0b0e14 !important;
+  border: 1px solid var(--metaphor-gold-dk) !important;
+  border-radius: 0px !important;
+  color: var(--parchment) !important;
+  padding: 10px 38px 10px 16px !important;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.8);
+  transition: all 0.25s ease !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23f5c21a'><path d='M7 10l5 5 5-5z'/></svg>") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 14px center !important;
+  background-size: 16px !important;
+  cursor: pointer;
+}
+
+select option {
+  background-color: #111622 !important;
+  color: #ede6da !important;
+  font-family: 'Spectral', serif !important;
+  padding: 12px !important;
+}
+
+input:focus,
+select:focus {
+  border-color: var(--metaphor-gold) !important;
+  box-shadow: 0 0 8px var(--metaphor-gold-glow), inset 0 1px 4px rgba(0,0,0,0.9) !important;
+  outline: none !important;
+  background-color: #121722 !important;
+}
+
+select:hover {
+  border-color: var(--metaphor-gold) !important;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffec63'><path d='M7 10l5 5 5-5z'/></svg>") !important;
+  box-shadow: 0 0 10px rgba(245, 194, 26, 0.15) !important;
+}
+
+/* ── Poster Cards (Styled as Archetype Tarot Cards) ── */
+.poster-card {
+  background: linear-gradient(160deg, #111520 0%, #080a0f 100%) !important;
+  border: 2px solid var(--metaphor-gold-dk) !important;
+  border-radius: 0px !important;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.6), 2px 2px 0px rgba(0,0,0,0.9) !important;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
   position: relative;
+  overflow: visible !important;
+}
+
+/* Red ribbon paint sweep under hovered poster */
+.poster-card:hover {
+  transform: translateY(-8px) rotate(-1deg) scale(1.03) !important;
+  border-color: var(--metaphor-gold) !important;
+  box-shadow: 
+    0 15px 30px rgba(0,0,0,0.7),
+    0 0 15px rgba(245, 194, 26, 0.25),
+    2px 2px 0px rgba(217, 30, 30, 0.8) !important;
+}
+
+.poster-media img {
+  border: 1px solid rgba(245,194,26,0.1) !important;
+  border-radius: 0px !important;
+  transition: all 0.3s ease !important;
+}
+
+/* Delicate filigree corners on hover */
+.poster-card::after {
+  content: '✦';
+  position: absolute;
+  top: 8px; left: 8px;
+  color: var(--metaphor-gold);
+  font-size: 0.75rem;
+  opacity: 0.6;
+}
+
+.poster-image-link:hover img {
+  border-color: var(--metaphor-gold-lt) !important;
+  transform: scale(1.02) !important;
+}
+
+/* Poster content text */
+.poster-copy {
+  padding: 12px 10px !important;
+  background: linear-gradient(180deg, transparent 0%, rgba(3,4,6,0.95) 100%);
+}
+
+.poster-copy strong {
+  font-family: 'Cinzel', serif !important;
+  color: var(--parchment) !important;
+  font-size: 0.92rem !important;
+  letter-spacing: 0.5px;
+  transition: color 0.2s ease;
+}
+
+.poster-card:hover .poster-copy strong {
+  color: var(--metaphor-gold-lt) !important;
+}
+
+.poster-copy span {
+  font-family: 'Oswald', sans-serif !important;
+  font-size: 0.72rem !important;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--metaphor-red) !important;
+  margin-top: 4px;
+}
+
+/* ── Wax Seal style Save/Favorite button on Posters ── */
+button.favorite-button {
+  width: 36px !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  border-radius: 50% !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  clip-path: none !important;
+  font-size: 0px !important; /* Hide text, show icon */
+  border: 2px solid var(--metaphor-gold) !important;
+  background: #7d0d0d !important;
+  box-shadow: 2px 2px 6px rgba(0,0,0,0.6) !important;
+  right: 8px !important;
+  bottom: 8px !important;
+  z-index: 10;
+}
+
+button.favorite-button::after {
+  content: '❤';
+  font-size: 1.1rem;
+  color: var(--metaphor-gold);
+}
+
+button.favorite-button:hover {
+  background: var(--metaphor-red) !important;
+  transform: scale(1.1) !important;
+}
+
+button.favorite-button.is-active {
+  background: var(--metaphor-red) !important;
+  border-color: var(--metaphor-gold-lt) !important;
+  box-shadow: 0 0 12px var(--metaphor-red-hover) !important;
+}
+
+button.favorite-button.is-active::after {
+  color: #fff;
+}
+
+/* ── Lobby Source Panel ── */
+.tmdb-panel {
+  background: linear-gradient(150deg, #111522 0%, #06080c 100%) !important;
+  border: 1px solid var(--border-gold) !important;
+  border-left: 4px solid var(--metaphor-red) !important;
+  border-radius: 0px !important;
+  box-shadow: 4px 4px 15px rgba(0,0,0,0.5) !important;
+}
+
+.status-line {
+  font-family: 'Spectral', serif;
+  font-style: italic;
+  color: var(--metaphor-gold) !important;
+}
+
+/* ── Genre Row Horizontal Scrollers ── */
+div[style*="overflow-x: auto"] {
+  padding: 15px 5px !important;
+}
+
+div[style*="overflow-x: auto"]::-webkit-scrollbar {
+  height: 5px;
+}
+
+div[style*="overflow-x: auto"]::-webkit-scrollbar-thumb {
+  background: var(--metaphor-gold-dk);
+}
+
+/* ── Video Player Screen (Gauntlet Runner Viewport) ── */
+.player-frame-wrap {
+  border: 3px solid var(--metaphor-gold) !important;
+  box-shadow: 
+    0 10px 30px rgba(0,0,0,0.8),
+    0 0 30px var(--metaphor-red-glow) !important;
+  border-radius: 0px !important;
+  background: #030406 !important;
+  position: relative;
+}
+
+/* Red banners at the corners of the cinema player screen */
+.player-frame-wrap::before {
+  content: '';
+  position: absolute;
+  top: -8px; left: -8px;
+  width: 20px; height: 20px;
+  border-top: 4px solid var(--metaphor-red);
+  border-left: 4px solid var(--metaphor-red);
+  z-index: 10;
+  pointer-events: none;
 }
 
 .player-frame-wrap::after {
   content: '';
   position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 2px;
-  background: linear-gradient(90deg,
-    transparent 5%,
-    var(--gold-border) 20%,
-    var(--gold) 50%,
-    var(--gold-border) 80%,
-    transparent 95%
-  );
-  z-index: 2;
-  opacity: 0.7;
+  bottom: -8px; right: -8px;
+  width: 20px; height: 20px;
+  border-bottom: 4px solid var(--metaphor-red);
+  border-right: 4px solid var(--metaphor-red);
+  z-index: 10;
+  pointer-events: none;
 }
 
-/* ── Watch Layout — Sidebar ── */
-.watch-layout {
-  border-color: var(--border-soft, #1E293B) !important;
-  border-radius: 16px !important;
-  overflow: hidden !important;
-  background: transparent !important;
-  box-shadow: 0 4px 25px rgba(0,0,0,0.3);
+/* Player top bar buttons */
+.player-topbar .header-actions button {
+  clip-path: none !important;
 }
 
+/* Battle Command Sidebar styled form */
 .player-sidebar {
-  background: linear-gradient(180deg, var(--velvet), var(--curtain-deep)) !important;
+  background: linear-gradient(180deg, #111622 0%, #06080c 100%) !important;
+  border-left: 2px solid var(--border-gold) !important;
+  padding: 30px !important;
 }
 
-/* ── Event Log — Theater Console ── */
-#eventLog {
-  background: var(--curtain-deep) !important;
-  border-color: var(--border-soft, #1E293B) !important;
-  color: var(--gold-muted) !important;
-  border-radius: 12px !important;
+.control-grid legend {
+  font-family: 'Oswald', sans-serif !important;
+  color: var(--metaphor-gold-lt) !important;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
 }
 
-/* ── Episode Items — Gold Trim on Active ── */
-.visual-season-select,
-select.visual-season-select {
-  background: var(--velvet) !important;
-  color: var(--text-warm) !important;
-  border: 1px solid var(--border-soft, #1E293B) !important;
-  border-radius: 12px !important;
-  padding: 0.5rem 1rem !important;
-  font-size: 1rem !important;
+.field span {
+  font-family: 'Oswald', sans-serif !important;
+  font-size: 0.8rem !important;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--metaphor-gold) !important;
+  margin-bottom: 4px;
 }
 
-.visual-season-select:focus,
-select.visual-season-select:focus {
-  border-color: var(--gold-border) !important;
-  box-shadow: 0 0 15px var(--gold-glow) !important;
-  outline: none !important;
+/* Custom Checkbox/Switches */
+.switch {
+  font-family: 'Oswald', sans-serif;
+  text-transform: uppercase;
 }
 
-/* ── Inputs & Selects — Velvet Forms ── */
-input,
-select,
-textarea {
-  background: var(--velvet) !important;
-  color: var(--text-warm) !important;
-  border: 1px solid var(--border-soft, #1E293B) !important;
-  border-radius: 12px !important;
+.switch input[type="checkbox"] {
+  accent-color: var(--metaphor-red);
+}
+
+/* Episode List Selection (Journey Nodes) */
+.visual-season-select {
+  font-family: 'Oswald', sans-serif !important;
+  font-weight: 600 !important;
+  text-transform: uppercase;
+  background-color: #182030 !important;
+  border: 1px solid var(--metaphor-gold) !important;
+  color: #fff !important;
+  border-radius: 0px !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23f5c21a'><path d='M7 10l5 5 5-5z'/></svg>") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 14px center !important;
+  background-size: 16px !important;
+  padding: 8px 38px 8px 16px !important;
+  cursor: pointer;
   transition: all 0.25s ease !important;
 }
 
-input:focus,
-select:focus,
-textarea:focus {
-  border-color: var(--gold-border) !important;
-  box-shadow: 0 0 0 3px var(--gold-glow), 0 0 20px var(--gold-glow) !important;
-  outline: none !important;
+.visual-season-select:hover {
+  border-color: var(--metaphor-gold-lt) !important;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffec63'><path d='M7 10l5 5 5-5z'/></svg>") !important;
+  box-shadow: 0 0 10px rgba(245, 194, 26, 0.15) !important;
 }
 
-input::placeholder,
-textarea::placeholder {
-  color: var(--text-muted) !important;
+/* Episode Grid Buttons */
+.episode-button {
+  background: linear-gradient(135deg, #111520 0%, #090c12 100%) !important;
+  border: 1px solid var(--border-gold) !important;
+  border-radius: 0px !important;
+  transition: all 0.25s ease !important;
 }
 
-/* ── Checkbox / Switch Accent ── */
-.switch input {
-  accent-color: var(--gold) !important;
+.episode-button:hover {
+  border-color: var(--metaphor-gold-lt) !important;
+  transform: scale(1.02) !important;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.5), 0 0 10px var(--metaphor-gold-glow) !important;
 }
 
-input[type="search"] {
-  background: var(--velvet) !important;
-  color: var(--text-warm) !important;
+.episode-button.is-active {
+  background: linear-gradient(135deg, var(--metaphor-red) 0%, #7d0d0d 100%) !important;
+  border-color: var(--metaphor-gold) !important;
+  box-shadow: 0 0 15px var(--metaphor-red-glow) !important;
 }
 
-/* ── Status / Muted Text ── */
-.status-line,
-.section-header p,
-.featured-content p,
-.poster-copy span,
-.empty-state,
-.field {
-  color: var(--text-dim) !important;
+.episode-button.is-active h4 {
+  color: #fff !important;
 }
 
-/* ── Field Labels ── */
-.field span {
-  color: var(--text-dim) !important;
-  font-weight: 500;
+.episode-button h4 {
+  font-family: 'Cinzel', serif !important;
+  color: var(--parchment) !important;
 }
 
-/* ── Scrollbar — Gold Trim ── */
+/* Chronology logs in player screen */
+.events-panel pre,
+#eventLog {
+  background-color: #030406 !important;
+  border: 1px solid var(--metaphor-gold-dk) !important;
+  color: var(--parchment-dim) !important;
+  font-family: monospace;
+  font-size: 0.8rem;
+  border-radius: 0px !important;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.9);
+}
+
+/* ── Profile Screen - Royal Virtues Dashboard ── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 20px !important;
+  margin-bottom: 40px !important;
+}
+
+.stat-tile {
+  background: linear-gradient(135deg, #182030 0%, #0d1117 100%) !important;
+  border: 2px solid var(--metaphor-gold-dk) !important;
+  border-radius: 0px !important;
+  position: relative;
+  overflow: hidden;
+  padding: 24px !important;
+  box-shadow: 3px 3px 0px rgba(0,0,0,0.8) !important;
+  transition: all 0.3s ease !important;
+}
+
+.stat-tile:hover {
+  border-color: var(--metaphor-gold) !important;
+  transform: translateY(-4px) !important;
+  box-shadow: 5px 5px 0px rgba(0,0,0,0.9), 0 0 15px rgba(245, 194, 26, 0.15) !important;
+}
+
+/* Large numbers styling */
+.stat-tile span {
+  font-family: 'Oswald', sans-serif !important;
+  font-size: 3.2rem !important;
+  font-weight: 700 !important;
+  color: var(--metaphor-gold) !important;
+  display: block;
+  text-shadow: 2px 2px 0px rgba(0,0,0,0.9);
+}
+
+.stat-tile p {
+  font-family: 'Oswald', sans-serif !important;
+  font-size: 0.85rem !important;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--parchment-dim) !important;
+  margin: 6px 0 0 0 !important;
+}
+
+/* Dynamic Virtues overlay title */
+.stat-tile::before {
+  content: 'VIRTUE RANK UP';
+  position: absolute;
+  right: -25px;
+  bottom: 15px;
+  font-family: 'Oswald', sans-serif;
+  font-size: 0.65rem;
+  letter-spacing: 1px;
+  color: rgba(217, 30, 30, 0.3);
+  transform: rotate(-90deg);
+  font-weight: 700;
+}
+
+/* Continue Watching / Favorites List */
+.profile-item {
+  background: linear-gradient(135deg, #111622 0%, #080a0f 100%) !important;
+  border: 1px solid var(--border-gold) !important;
+  border-radius: 0px !important;
+  margin-bottom: 12px;
+  transition: all 0.25s ease !important;
+}
+
+.profile-item:hover {
+  border-color: var(--metaphor-gold) !important;
+  transform: scale(1.015) translateX(6px) !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 10px rgba(245, 194, 26, 0.1) !important;
+}
+
+.profile-item-link img {
+  border-radius: 0px !important;
+  border: 1px solid var(--metaphor-gold-dk) !important;
+}
+
+.profile-item-copy strong {
+  font-family: 'Cinzel', serif !important;
+  color: var(--parchment) !important;
+}
+
+.profile-item-copy span {
+  font-family: 'Oswald', sans-serif !important;
+  font-size: 0.75rem !important;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--metaphor-red) !important;
+}
+
+/* ── Oath of Allegiance Login Guard Layout ── */
+form.control-grid {
+  border-radius: 0px !important;
+}
+
+.auth-card-title {
+  font-family: 'Pirata One', serif !important;
+  font-size: 3rem !important;
+  color: var(--metaphor-red) !important;
+  text-shadow: 2px 2px 0px rgba(0,0,0,0.9);
+}
+
+.auth-parchment-scroll {
+  background-color: #111520 !important;
+  background-image: 
+    radial-gradient(circle at top left, rgba(245,194,26,0.08) 0%, transparent 40%),
+    radial-gradient(circle at bottom right, rgba(217,30,30,0.08) 0%, transparent 40%) !important;
+  border: 2px solid var(--metaphor-gold) !important;
+  box-shadow: 0 15px 30px rgba(0,0,0,0.8), 0 0 40px rgba(245, 194, 26, 0.05) !important;
+  position: relative;
+}
+
+/* Ribbon badge on Scroll panel */
+.auth-parchment-scroll::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 24px;
+  width: 30px; height: 50px;
+  background: var(--metaphor-red);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%);
+  border: 1px solid var(--metaphor-gold);
+  border-top: none;
+  z-index: 5;
+}
+
+/* ── Scrollbars ── */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--curtain-deep);
+  background: var(--ink-deep);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--seats);
-  border-radius: 4px;
-  border: 1px solid var(--gold-border);
+  background: var(--parchment-dark);
+  border: 1px solid var(--metaphor-gold-dk);
+  border-radius: 0px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--seats-hover);
-  border-color: var(--gold);
+  background: var(--metaphor-red);
+  border-color: var(--metaphor-gold-lt);
 }
 
-/* ── Genre Row Headers ── */
-.catalog-section h3 {
-  position: relative;
-  display: inline-block;
-  padding-bottom: 6px;
-}
-
-.catalog-section h3::after {
-  content: '';
-  position: absolute;
-  bottom: 0; left: 0;
-  width: 40px;
-  height: 2px;
-  background: linear-gradient(90deg, var(--gold), transparent);
-  border-radius: 1px;
-}
-
-/* ── Load More Button ── */
-button.secondary-button[onclick*="displayLimit"] {
-  border-color: var(--gold-border) !important;
-  color: var(--gold-light) !important;
-  font-weight: 600 !important;
-}
-
-/* ── Episode Cards ── */
-div[style*="background: #1a2540"] {
-  background: rgba(212, 175, 55, 0.08) !important;
-  border-color: var(--gold-border) !important;
-}
-
-/* ── Empty States ── */
-p[style*="color: #94a3b8"] {
-  color: var(--text-dim) !important;
-}
-
-/* ── Episode Buttons ── */
-.episode-card-btn {
-  background: linear-gradient(160deg, var(--velvet), var(--curtain-deep)) !important;
-  border: 1px solid var(--border-soft, #1E293B) !important;
-  border-radius: 12px !important;
-  color: var(--text-warm) !important;
-  transition: all 0.25s ease !important;
-}
-
-.episode-card-btn:hover {
-  border-color: var(--gold-border) !important;
-  box-shadow: 0 0 15px var(--gold-glow) !important;
-}
-
-.episode-card-btn.is-active {
-  background: rgba(212, 175, 55, 0.08) !important;
-  border-color: var(--gold-border) !important;
-  box-shadow: 0 0 15px var(--gold-glow) !important;
-}
-
-.episode-card-btn img {
-  border-radius: 8px !important;
-}
-
-.episode-card-btn .placeholder-img {
-  background: var(--curtain-deep) !important;
-  border: 1px solid var(--border-soft, #1E293B) !important;
-  border-radius: 8px !important;
-  color: var(--text-muted) !important;
-}
-
-.episode-card-btn h4 {
-  color: var(--text-warm) !important;
-}
-
-.episode-card-btn p {
-  color: var(--text-dim) !important;
-}
-
-.episode-button {
-  background: linear-gradient(160deg, var(--velvet), var(--curtain-deep)) !important;
-  border: 1px solid var(--border-soft, #1E293B) !important;
-  border-radius: 12px !important;
-  color: var(--text-warm) !important;
-  transition: all 0.25s ease !important;
-  width: 100%;
-}
-
-.episode-button:hover {
-  border-color: var(--gold-border) !important;
-  box-shadow: 0 0 15px var(--gold-glow) !important;
-}
-
-.episode-button.is-active {
-  background: rgba(212, 175, 55, 0.08) !important;
-  border-color: var(--gold-border) !important;
-  box-shadow: 0 0 15px var(--gold-glow) !important;
-}
-
-.episode-placeholder {
-  background: var(--curtain-deep) !important;
-  border: 1px solid var(--border-soft, #1E293B);
-}
-
-/* ── Progress Events ── */
-pre {
-  background: var(--curtain-deep) !important;
-  border: 1px solid var(--border-soft, #1E293B) !important;
-  border-radius: 12px !important;
-  color: var(--gold-muted) !important;
-  padding: 1rem !important;
-}
-
-/* ── Smooth Theater Dimming ── */
-* {
-  transition: background-color 0.2s ease, border-color 0.25s ease, box-shadow 0.25s ease, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.2s ease;
-}
-
-/* ── Lights Out — Cinema Dimming ── */
-.lights-out .player-frame-wrap {
-  box-shadow:
-    0 0 80px rgba(212, 175, 55, 0.08),
-    0 0 120px rgba(0, 0, 0, 0.6),
-    0 8px 40px rgba(0, 0, 0, 0.4) !important;
-  border-color: var(--gold-border) !important;
-}
-
-.lights-out .player-frame-wrap::after {
-  opacity: 1 !important;
-}
-
-.lights-out-overlay {
-  background:
-    radial-gradient(ellipse 60% 50% at 50% 30%, rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.94)) !important;
+/* ── Responsive adjustments ── */
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .page-header,
+  .player-topbar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 20px !important;
+  }
 }

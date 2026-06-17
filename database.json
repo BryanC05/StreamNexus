@@ -1,17 +1,8 @@
 {
   "users": {
-    "testuser": {
-      "username": "testuser",
-      "passwordHash": "$2b$10$5oYJVrIn4nnuua8nCrd24uAg8V5D9SZg9eFOhFp7.yvP2r89RWn7i",
-      "favorites": [],
-      "history": [],
-      "progress": {},
-      "watchTime": 0,
-      "createdAt": "2026-06-08T07:08:49.523Z"
-    },
     "bece": {
       "username": "bece",
-      "passwordHash": "$2b$10$CrX.CJKJlDocqZPA.o7SbOytT4/RbAQV10qh1/DfSX83ICqoxhl4O",
+      "passwordHash": "$2b$10$w43x35Yj40yaJtFf7sYPyeQAyJEZAAvQZMXtVRhcBD3Ys.BHPqBMm",
       "favorites": [
         {
           "id": "1339713",
@@ -25,28 +16,97 @@
           "totalSeasons": 0,
           "totalEpisodes": 0,
           "genreIds": [
-            27,
-            53
+            27
           ],
-          "savedAt": 1780902629910
-        },
+          "savedAt": 1781669670819
+        }
+      ],
+      "history": [
         {
-          "id": "79744",
+          "id": "76479",
           "mediaType": "tv",
-          "title": "The Rookie",
-          "year": "2018",
-          "poster": "https://image.tmdb.org/t/p/w342/70kTz0OmjjZe7zHvIDrq2iKW7PJ.jpg",
-          "backdrop": "https://image.tmdb.org/t/p/w1280/6iNWfGVCEfASDdlNb05TP5nG0ll.jpg",
+          "title": "The Boys",
+          "year": "2019",
+          "poster": "https://image.tmdb.org/t/p/w342/in1R2dDc421JxsoRWaIIAqVI2KE.jpg",
+          "backdrop": "https://image.tmdb.org/t/p/w1280/bq28ajZaoMyzEIm6REelqyqtEDZ.jpg",
           "season": 1,
           "episode": 1,
           "totalSeasons": 0,
           "totalEpisodes": 0,
           "genreIds": [
-            80,
+            10765,
+            10759
+          ],
+          "watchedAt": 1781670316990
+        },
+        {
+          "id": "687163",
+          "mediaType": "movie",
+          "title": "Project Hail Mary",
+          "year": "2026",
+          "poster": "https://image.tmdb.org/t/p/w342/yihdXomYb5kTeSivtFndMy5iDmf.jpg",
+          "backdrop": "https://image.tmdb.org/t/p/w1280/8Tfys3mDZVp4tNoH2ktm06a0Tau.jpg",
+          "season": 1,
+          "episode": 1,
+          "totalSeasons": 0,
+          "totalEpisodes": 0,
+          "genreIds": [
+            878,
+            12
+          ],
+          "watchedAt": 1781670206909
+        },
+        {
+          "id": "276161",
+          "mediaType": "tv",
+          "title": "Teach You a Lesson",
+          "year": "2026",
+          "poster": "https://image.tmdb.org/t/p/w342/fMECSPrTmRClSViMsXFYmiYIcWP.jpg",
+          "backdrop": "https://image.tmdb.org/t/p/w1280/vyG93jhmPL7tBIhRtCLa5mdBKob.jpg",
+          "season": 1,
+          "episode": 1,
+          "totalSeasons": 0,
+          "totalEpisodes": 0,
+          "genreIds": [
+            10759,
             18,
             35
           ],
-          "savedAt": 1780902706058
+          "watchedAt": 1781670029486
+        },
+        {
+          "id": "1339713",
+          "mediaType": "movie",
+          "title": "Obsession",
+          "year": "2026",
+          "poster": "https://image.tmdb.org/t/p/w342/bRwnj8WEKBCvmfeUNOukJPwB43K.jpg",
+          "backdrop": "https://image.tmdb.org/t/p/w1280/5lTZyuBTNOfawsfPT8Q0cIg6qAF.jpg",
+          "season": 1,
+          "episode": 1,
+          "totalSeasons": 0,
+          "totalEpisodes": 0,
+          "genreIds": [
+            27
+          ],
+          "watchedAt": 1781669917750
+        },
+        {
+          "id": "1275779",
+          "mediaType": "movie",
+          "title": "Disclosure Day",
+          "year": "2026",
+          "poster": "https://image.tmdb.org/t/p/w342/3o5YPjDGDTcTDL5ftDA9NwN9dLd.jpg",
+          "backdrop": "https://image.tmdb.org/t/p/w1280/s6ly8laenkHWlIBRkLSfIuEMLC6.jpg",
+          "season": 1,
+          "episode": 1,
+          "totalSeasons": 0,
+          "totalEpisodes": 0,
+          "genreIds": [
+            28,
+            878,
+            53
+          ],
+          "watchedAt": 1781663376167
         },
         {
           "id": "124364",
@@ -54,7 +114,7 @@
           "title": "FROM",
           "year": "2022",
           "poster": "https://image.tmdb.org/t/p/w342/pRtJagIxpfODzzb0T0NAvZSzErC.jpg",
-          "backdrop": "https://image.tmdb.org/t/p/w1280/xLdw1xdHocKYFFvx7w41NchXMfJ.jpg",
+          "backdrop": "https://image.tmdb.org/t/p/w1280/m7eiSGHFzr584zFmetGqkqaU6BN.jpg",
           "season": 1,
           "episode": 1,
           "totalSeasons": 0,
@@ -64,31 +124,93 @@
             18,
             10765
           ],
-          "savedAt": 1780902711141
-        },
-        {
-          "id": "220102",
-          "mediaType": "tv",
-          "title": "Spider-Noir",
+          "watchedAt": 1781663347440
+        }
+      ],
+      "progress": {
+        "movie:1339713": {
+          "id": "1339713",
+          "mediaType": "movie",
+          "title": "Obsession",
           "year": "2026",
-          "poster": "https://image.tmdb.org/t/p/w342/oD8WSVqz84ZRfelkr7JPeJwR9Iv.jpg",
-          "backdrop": "https://image.tmdb.org/t/p/w1280/6t2FvBr9DS8MOq0m5FAwPBCdAW5.jpg",
+          "poster": "https://image.tmdb.org/t/p/w342/bRwnj8WEKBCvmfeUNOukJPwB43K.jpg",
+          "backdrop": "https://image.tmdb.org/t/p/w1280/5lTZyuBTNOfawsfPT8Q0cIg6qAF.jpg",
           "season": 1,
           "episode": 1,
           "totalSeasons": 0,
           "totalEpisodes": 0,
           "genreIds": [
-            80,
-            18,
-            9648
+            27
           ],
-          "savedAt": 1780902712675
+          "currentTime": 30,
+          "duration": 6480,
+          "progress": 0.4629629629629629,
+          "updatedAt": 1781669917750
+        },
+        "tv:276161:s1:e1": {
+          "id": "276161",
+          "mediaType": "tv",
+          "title": "Teach You a Lesson",
+          "year": "2026",
+          "poster": "https://image.tmdb.org/t/p/w342/fMECSPrTmRClSViMsXFYmiYIcWP.jpg",
+          "backdrop": "https://image.tmdb.org/t/p/w1280/vyG93jhmPL7tBIhRtCLa5mdBKob.jpg",
+          "season": 1,
+          "episode": 1,
+          "totalSeasons": 0,
+          "totalEpisodes": 0,
+          "genreIds": [
+            10759,
+            18,
+            35
+          ],
+          "currentTime": 35,
+          "duration": 2700,
+          "progress": 1.2962962962962963,
+          "updatedAt": 1781670029486
+        },
+        "movie:687163": {
+          "id": "687163",
+          "mediaType": "movie",
+          "title": "Project Hail Mary",
+          "year": "2026",
+          "poster": "https://image.tmdb.org/t/p/w342/yihdXomYb5kTeSivtFndMy5iDmf.jpg",
+          "backdrop": "https://image.tmdb.org/t/p/w1280/8Tfys3mDZVp4tNoH2ktm06a0Tau.jpg",
+          "season": 1,
+          "episode": 1,
+          "totalSeasons": 0,
+          "totalEpisodes": 0,
+          "genreIds": [
+            878,
+            12
+          ],
+          "currentTime": 40,
+          "duration": 9420,
+          "progress": 0.42462845010615713,
+          "updatedAt": 1781670206909
+        },
+        "tv:76479:s1:e1": {
+          "id": "76479",
+          "mediaType": "tv",
+          "title": "The Boys",
+          "year": "2019",
+          "poster": "https://image.tmdb.org/t/p/w342/in1R2dDc421JxsoRWaIIAqVI2KE.jpg",
+          "backdrop": "https://image.tmdb.org/t/p/w1280/bq28ajZaoMyzEIm6REelqyqtEDZ.jpg",
+          "season": 1,
+          "episode": 1,
+          "totalSeasons": 0,
+          "totalEpisodes": 0,
+          "genreIds": [
+            10765,
+            10759
+          ],
+          "currentTime": 35,
+          "duration": 2700,
+          "progress": 1.2962962962962963,
+          "updatedAt": 1781670316990
         }
-      ],
-      "history": [],
-      "progress": {},
-      "watchTime": 0,
-      "createdAt": "2026-06-08T07:09:33.513Z"
+      },
+      "watchTime": 140,
+      "createdAt": "2026-06-17T04:14:15.750Z"
     }
   }
 }
