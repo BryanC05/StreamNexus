@@ -388,9 +388,8 @@ button:active,
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 9001;
-  width: 90vw;
-  max-width: 1920px;
-  max-height: 90vh;
+  width: min(90vw, calc(90vh * 16 / 9));
+  aspect-ratio: 16 / 9;
   margin: 0;
 }
 

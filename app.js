@@ -1320,6 +1320,9 @@ function initPlayerPage() {
   const reloadPreviewButton = document.querySelector("#reloadPreview");
   const clearEventsButton = document.querySelector("#clearEvents");
   const favoritePlayerButton = document.querySelector("#favoritePlayer");
+  const lightsOutBtn = document.querySelector("#lightsOutBtn");
+  const lightsOutOverlay = document.querySelector("#lightsOutOverlay");
+  const playerShell = document.querySelector(".player-shell");
   const copyButtons = document.querySelectorAll("[data-copy-target]");
   let eventEntries = [];
 
@@ -1796,6 +1799,32 @@ function initPlayerPage() {
     eventEntries = [];
     lastRecordedTime = null;
     eventLog.textContent = "Waiting for player events...";
+  });
+
+  let lightsOut = false;
+  function toggleLightsOut() {
+    lightsOut = !lightsOut;
+    if (playerShell) playerShell.classList.toggle("lights-out", lightsOut);
+    if (lightsOutBtn) {
+      lightsOutBtn.classList.toggle("is-active", lightsOut);
+      lightsOutBtn.textContent = lightsOut ? "💡 Lights On" : "💡 Lights Out";
+    }
+    if (lightsOutOverlay) {
+      lightsOutOverlay.style.display = lightsOut ? "block" : "none";
+    }
+  }
+
+  if (lightsOutBtn) {
+    lightsOutBtn.addEventListener("click", toggleLightsOut);
+  }
+  if (lightsOutOverlay) {
+    lightsOutOverlay.addEventListener("click", toggleLightsOut);
+  }
+
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && lightsOut) {
+      toggleLightsOut();
+    }
   });
 
   async function runAutoFetch(silent = false) {

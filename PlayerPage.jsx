@@ -340,6 +340,7 @@ export default function PlayerPage() {
         <Link className="secondary-button" to="/">Home</Link>
         <div><p className="eyebrow">{playerMeta}</p><h1>{title}</h1></div>
         <div className="header-actions">
+          <Link className="secondary-button" to="/profile">Profile</Link>
           <button className={`secondary-button ${lightsOut ? 'is-active' : ''}`} onClick={() => setLightsOut(lo => !lo)} title="Toggle Lights Out mode">💡 Lights {lightsOut ? 'On' : 'Out'}</button>
           <button className={`secondary-button ${isFav ? 'is-active' : ''}`} onClick={() => { toggleFavorite(getCurrentEntry()); setRenderTrigger(x => x+1); }}>{isFav ? 'Saved' : 'Favorite'}</button>
         </div>
