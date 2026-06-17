@@ -841,27 +841,37 @@ async function autoFetchSubtitles(tmdbId, mediaType, season, episode) {
     const subStr = JSON.stringify(sub);
     const isWebRip = subStr.toLowerCase().includes("web") || subStr.toLowerCase().includes("nf") || subStr.toLowerCase().includes("amzn") || subStr.toLowerCase().includes("hulu");
     
-    const regex = /"url"\s*:\s*"([^"]+\.zip)"/gi;
-    let match;
-    let found = false;
-    while ((match = regex.exec(subStr)) !== null) {
-      const url = match[1].replace(/\\/g, "");
+    let url = sub.url || "";
+    if (url) {
+      url = url.replace(/\\/g, "");
       if (isWebRip) {
         if (!preferredZipUrls.includes(url)) preferredZipUrls.push(url);
       } else {
         if (!otherZipUrls.includes(url)) otherZipUrls.push(url);
       }
-      found = true;
-    }
-    
-    if (!found) {
-      const fallbackRegex = /"([^"]+\.zip)"/gi;
-      while ((match = fallbackRegex.exec(subStr)) !== null) {
-        const url = match[1].replace(/\\/g, "");
+    } else {
+      const regex = /"url"\s*:\s*"([^"]+\.zip(?:\?[^"]*)?)"/gi;
+      let match;
+      let found = false;
+      while ((match = regex.exec(subStr)) !== null) {
+        const val = match[1].replace(/\\/g, "");
         if (isWebRip) {
-          if (!preferredZipUrls.includes(url)) preferredZipUrls.push(url);
+          if (!preferredZipUrls.includes(val)) preferredZipUrls.push(val);
         } else {
-          if (!otherZipUrls.includes(url)) otherZipUrls.push(url);
+          if (!otherZipUrls.includes(val)) otherZipUrls.push(val);
+        }
+        found = true;
+      }
+      
+      if (!found) {
+        const fallbackRegex = /"([^"]+\/subtitle\/[^"]+\.zip(?:\?[^"]*)?)"/gi;
+        while ((match = fallbackRegex.exec(subStr)) !== null) {
+          const val = match[1].replace(/\\/g, "");
+          if (isWebRip) {
+            if (!preferredZipUrls.includes(val)) preferredZipUrls.push(val);
+          } else {
+            if (!otherZipUrls.includes(val)) otherZipUrls.push(val);
+          }
         }
       }
     }
