@@ -505,12 +505,28 @@ export default function PlayerPage() {
                     <span style={{ fontSize: '0.8rem', display: 'block', marginBottom: '4px', color: '#ccc' }}>Vertical Position (Adjust if subtitles are too low or high)</span>
                     <select value={subPosition} onChange={(e) => setSubPosition(e.target.value)} style={{ width: '100%', padding: '8px', fontSize: '0.85rem', background: '#111', color: '#fff', border: '1px solid var(--gold)', borderRadius: '4px' }}>
                       <option value="">Default (Player Bottom)</option>
-                      <option value="90%">Slightly Raised (90% from top)</option>
-                      <option value="85%">Raised (85% from top)</option>
-                      <option value="80%">Highly Raised (80% from top)</option>
-                      <option value="75%">Very High (75% from top)</option>
-                      <option value="70%">Upper Middle (70% from top)</option>
-                      <option value="10%">Top (10% from top)</option>
+                      <optgroup label="Percentage from Top (VidSrc / Custom Player)">
+                        <option value="90%">90% (Slightly Raised)</option>
+                        <option value="85%">85% (Raised)</option>
+                        <option value="80%">80% (Highly Raised)</option>
+                        <option value="75%">75% (Very High)</option>
+                        <option value="70%">70% (Upper Middle)</option>
+                        <option value="60%">60% (Lower Middle)</option>
+                        <option value="50%">50% (Center Screen)</option>
+                        <option value="10%">10% (Top of Screen)</option>
+                      </optgroup>
+                      <optgroup label="Line Offset (Highly Recommended for Vidking)">
+                        <option value="-2">Raised 1 Line (line:-2)</option>
+                        <option value="-3">Raised 2 Lines (line:-3)</option>
+                        <option value="-4">Raised 3 Lines (line:-4)</option>
+                        <option value="-5">Raised 4 Lines (line:-5)</option>
+                        <option value="-6">Raised 5 Lines (line:-6)</option>
+                        <option value="-7">Raised 6 Lines (line:-7)</option>
+                        <option value="-8">Raised 7 Lines (line:-8)</option>
+                        <option value="-9">Raised 8 Lines (line:-9)</option>
+                        <option value="-10">Raised 10 Lines (line:-10)</option>
+                        <option value="-15">Raised 15 Lines (line:-15)</option>
+                      </optgroup>
                     </select>
                   </div>
 
