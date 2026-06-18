@@ -231,6 +231,24 @@ export default function PlayerPage() {
           ? `${title.replace(/[^a-zA-Z0-9]/g, '_')}_S${season}E${episode}.vtt`
           : `${title.replace(/[^a-zA-Z0-9]/g, '_')}_Subtitle.vtt`;
         
+        // Only VidSrc servers support URL-based subtitle injection.
+        const isVidsrc = server.includes('vidsrc');
+
+        if (!isVidsrc) {
+          // Download directly for Vidking and other third-party servers that don't support URL injection
+          const blob = new Blob([text], { type: 'text/vtt' });
+          const newUrl = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = newUrl;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(newUrl);
+          alert("This provider (Vidking) does not support automatic subtitle injection.\n\nWe have downloaded the subtitle file to your device. Please click the CC/Subtitle button inside the player to upload it manually, or switch to a VidSrc provider.");
+          return;
+        }
+
         try {
           const uploadedUrl = await uploadSubtitleToTempHost(text, filename);
           setSubUrl(uploadedUrl); // Auto-injects URL and reloads the iframe
@@ -244,6 +262,7 @@ export default function PlayerPage() {
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
+          URL.revokeObjectURL(newUrl);
           alert("Subtitle auto-apply failed. Downloaded locally instead! \n\nPlease upload it manually using the 'CC' button.");
         }
       } else {
