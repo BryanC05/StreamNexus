@@ -27,6 +27,7 @@ export default function PlayerPage() {
   const [subtitleBlobUrl, setSubtitleBlobUrl] = useState('');
   const [subtitleText, setSubtitleText] = useState('');
   const [subtitleOffset, setSubtitleOffset] = useState(0);
+  const [subPosition, setSubPosition] = useState('');
   const [customVideoUrl, setCustomVideoUrl] = useState('');
 
   const [playerMeta, setPlayerMeta] = useState(mediaType === 'tv' ? `TV Series - TMDB ${tmdbId}` : `Movie - TMDB ${tmdbId}`);
@@ -92,6 +93,51 @@ export default function PlayerPage() {
       }
       return line;
     }).join('\n');
+  };
+
+  const adjustVttLinePosition = (lineStr, linePos) => {
+    if (!linePos) return lineStr;
+    const parts = lineStr.split('-->');
+    if (parts.length !== 2) return lineStr;
+    
+    const startStr = parts[0].trim();
+    const rest = parts[1].trim().split(/\s+/);
+    const endStr = rest[0];
+    
+    const otherSettings = rest.slice(1).filter(s => !s.startsWith('line:'));
+    return `${startStr} --> ${endStr} line:${linePos}${otherSettings.length > 0 ? ' ' + otherSettings.join(' ') : ''}`;
+  };
+
+  const applyVttPositioning = (text, linePos) => {
+    if (!linePos) return text;
+    return text.split('\n').map(line => {
+      if (line.includes('-->')) {
+        return adjustVttLinePosition(line, linePos);
+      }
+      return line;
+    }).join('\n');
+  };
+
+  const downloadCustomSubtitle = () => {
+    if (!subtitleText) return;
+    const filename = mediaType === 'tv' 
+      ? `${title.replace(/[^a-zA-Z0-9]/g, '_')}_S${season}E${episode}.vtt`
+      : `${title.replace(/[^a-zA-Z0-9]/g, '_')}_Subtitle.vtt`;
+      
+    let processedText = shiftWebVttText(subtitleText, subtitleOffset);
+    if (subPosition) {
+      processedText = applyVttPositioning(processedText, subPosition);
+    }
+    
+    const blob = new Blob([processedText], { type: 'text/vtt' });
+    const newUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = newUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(newUrl);
   };
 
   const normalizeSubtitleText = (rawText) => {
@@ -175,15 +221,18 @@ export default function PlayerPage() {
   useEffect(() => {
     if (!subtitleText) return;
     
-    const shiftedText = shiftWebVttText(subtitleText, subtitleOffset);
-    const blob = new Blob([shiftedText], { type: 'text/vtt' });
+    let processedText = shiftWebVttText(subtitleText, subtitleOffset);
+    if (subPosition) {
+      processedText = applyVttPositioning(processedText, subPosition);
+    }
+    const blob = new Blob([processedText], { type: 'text/vtt' });
     const newUrl = URL.createObjectURL(blob);
     
     setSubtitleBlobUrl(prev => {
       if (prev) URL.revokeObjectURL(prev);
       return newUrl;
     });
-  }, [subtitleText, subtitleOffset]);
+  }, [subtitleText, subtitleOffset, subPosition]);
 
   // Effect to securely hot-swap subtitles in the Custom HTML5 Video Player
   useEffect(() => {
@@ -224,6 +273,9 @@ export default function PlayerPage() {
     try {
       setIsFetchingSubs(true);
       const text = await autoFetchSubtitles(tmdbId, mediaType, season, episode);
+      setSubtitleText(text);
+      setSubtitleOffset(0);
+      setSubPosition('');
 
       const isCustomPlayer = server === 'custom';
       if (!isCustomPlayer) {
@@ -245,7 +297,7 @@ export default function PlayerPage() {
           a.click();
           document.body.removeChild(a);
           URL.revokeObjectURL(newUrl);
-          alert("This provider (Vidking) does not support automatic subtitle injection.\n\nWe have downloaded the subtitle file to your device. Please click the CC/Subtitle button inside the player to upload it manually, or switch to a VidSrc provider.");
+          alert("This provider (Vidking) does not support automatic subtitle injection.\n\nWe have downloaded the subtitle file to your device. Please click the CC/Subtitle button inside the player to upload it manually. You can adjust the offset/position and click 'Download Subtitles' to save it again.");
           return;
         }
 
@@ -266,8 +318,6 @@ export default function PlayerPage() {
           alert("Subtitle auto-apply failed. Downloaded locally instead! \n\nPlease upload it manually using the 'CC' button.");
         }
       } else {
-        setSubtitleText(text);
-        setSubtitleOffset(0);
         alert("Subtitles automatically generated and applied to your custom player!");
       }
     } catch (err) {
@@ -413,38 +463,64 @@ export default function PlayerPage() {
                         const normalized = normalizeSubtitleText(evt.target.result);
                         setSubtitleText(normalized);
                         setSubtitleOffset(0);
+                        setSubPosition('');
                         alert("Custom subtitle loaded successfully!");
                       };
                       reader.readAsText(file);
                     }
                   }} />
                 </label>
-                <div className="field" style={{ gridColumn: '1 / -1' }}>
-                  <span>Subtitle Sync / Delay Controls</span>
-                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                    <button type="button" className="secondary-button" onClick={() => setSubtitleOffset(prev => prev - 1.0)}>-1.0s</button>
-                    <button type="button" className="secondary-button" onClick={() => setSubtitleOffset(prev => prev - 0.5)}>-0.5s</button>
-                    <span style={{ flex: 1, textAlign: 'center', fontWeight: 'bold', fontSize: '1rem', color: 'var(--gold-light)' }}>
-                      Offset: {subtitleOffset > 0 ? `+${subtitleOffset.toFixed(1)}` : `${subtitleOffset.toFixed(1)}`}s
-                    </span>
-                    <button type="button" className="secondary-button" onClick={() => setSubtitleOffset(prev => prev + 0.5)}>+0.5s</button>
-                    <button type="button" className="secondary-button" onClick={() => setSubtitleOffset(prev => prev + 1.0)}>+1.0s</button>
-                    <button type="button" className="secondary-button" onClick={() => setSubtitleOffset(0)}>Reset</button>
-                  </div>
-                  <p style={{ margin: 0, fontSize: '0.8rem' }}>Adjust timings if the subtitles start too early or late relative to the audio.</p>
-                </div>
               </>
             )}
             <label className="field"><span>TMDB ID</span><input type="number" value={tmdbId} onChange={e => setTmdbId(e.target.value)} /></label>
             <label className="field"><span>Start Time</span><input type="number" value={progress} onChange={e => setProgress(e.target.value)} /></label>
             <label className="field"><span>External Subtitle URL</span><input type="url" placeholder="https://... (.vtt or .srt)" value={subUrl} onChange={e => setSubUrl(e.target.value)} /></label>
-            <div className="field">
+            <div className="field" style={{ gridColumn: '1 / -1' }}>
               <span>Subtitles Helper</span>
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                 <button type="button" className="secondary-button" onClick={handleAutoFetchSubtitles} disabled={isFetchingSubs} style={{ flex: 1 }}>{isFetchingSubs ? "Fetching..." : "Auto-Fetch Subtitles"}</button>
                 <button type="button" className="secondary-button" onClick={handleFindSubtitles} style={{ flex: 1 }}>Manual Search</button>
               </div>
-              <p style={{ margin: 0, fontSize: '0.8rem' }}>Instantly download subtitles, then upload them using the video player's CC button.</p>
+              <p style={{ margin: '0 0 12px 0', fontSize: '0.8rem' }}>Instantly download subtitles, then upload them using the video player's CC button.</p>
+
+              {subtitleText && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.1)', marginTop: '8px' }}>
+                  <span style={{ fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--gold-light)' }}>Customize Subtitles</span>
+                  
+                  <div>
+                    <span style={{ fontSize: '0.8rem', display: 'block', marginBottom: '4px', color: '#ccc' }}>Sync Delay</span>
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      <button type="button" className="secondary-button" style={{ padding: '4px 8px', fontSize: '0.8rem', minHeight: '30px' }} onClick={() => setSubtitleOffset(prev => prev - 1.0)}>-1.0s</button>
+                      <button type="button" className="secondary-button" style={{ padding: '4px 8px', fontSize: '0.8rem', minHeight: '30px' }} onClick={() => setSubtitleOffset(prev => prev - 0.5)}>-0.5s</button>
+                      <span style={{ flex: 1, textAlign: 'center', fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--gold-light)' }}>
+                        Offset: {subtitleOffset > 0 ? `+${subtitleOffset.toFixed(1)}` : `${subtitleOffset.toFixed(1)}`}s
+                      </span>
+                      <button type="button" className="secondary-button" style={{ padding: '4px 8px', fontSize: '0.8rem', minHeight: '30px' }} onClick={() => setSubtitleOffset(prev => prev + 0.5)}>+0.5s</button>
+                      <button type="button" className="secondary-button" style={{ padding: '4px 8px', fontSize: '0.8rem', minHeight: '30px' }} onClick={() => setSubtitleOffset(prev => prev + 1.0)}>+1.0s</button>
+                      <button type="button" className="secondary-button" style={{ padding: '4px 8px', fontSize: '0.8rem', minHeight: '30px' }} onClick={() => setSubtitleOffset(0)}>Reset</button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <span style={{ fontSize: '0.8rem', display: 'block', marginBottom: '4px', color: '#ccc' }}>Vertical Position (Adjust if subtitles are too low or high)</span>
+                    <select value={subPosition} onChange={(e) => setSubPosition(e.target.value)} style={{ width: '100%', padding: '8px', fontSize: '0.85rem', background: '#111', color: '#fff', border: '1px solid var(--gold)', borderRadius: '4px' }}>
+                      <option value="">Default (Player Bottom)</option>
+                      <option value="90%">Slightly Raised (90% from top)</option>
+                      <option value="85%">Raised (85% from top)</option>
+                      <option value="80%">Highly Raised (80% from top)</option>
+                      <option value="75%">Very High (75% from top)</option>
+                      <option value="70%">Upper Middle (70% from top)</option>
+                      <option value="10%">Top (10% from top)</option>
+                    </select>
+                  </div>
+
+                  {(!server.includes('vidsrc') && server !== 'custom') && (
+                    <button type="button" className="secondary-button" style={{ fontSize: '0.85rem', padding: '8px', width: '100%', borderColor: 'var(--gold)' }} onClick={downloadCustomSubtitle}>
+                      💾 Download Customized Subtitle File
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </form>
 
