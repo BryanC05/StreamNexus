@@ -811,18 +811,34 @@ async function autoFetchSubtitles(tmdbId, mediaType, season, episode) {
   ];
 
   let data = null;
-  for (const targetUrl of targetApiUrls) {
-    try {
-      const res = await fetch(targetUrl);
-      if (!res.ok) continue;
-      const json = await res.json();
-      // Basic validation to ensure the proxy didn't return an HTML error page
-      if (json && (json.subtitles || json.results || json.status !== undefined)) {
-        data = json;
+  let subs = [];
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    data = null;
+    for (const targetUrl of targetApiUrls) {
+      try {
+        const res = await fetch(targetUrl);
+        if (!res.ok) continue;
+        const json = await res.json();
+        if (json && (json.subtitles || json.results || json.status !== undefined)) {
+          data = json;
+          break;
+        }
+      } catch (e) {
+        continue;
+      }
+    }
+
+    if (data) {
+      subs = data.subtitles || data.results || [];
+      if (data.status && subs.length > 0) {
         break;
       }
-    } catch (e) {
-      continue; // Suppress "Failed to fetch" network errors and try the next proxy
+    }
+
+    if (attempt < 3) {
+      console.log(`SubDL search returned empty/failed (Attempt ${attempt}). Retrying in 2 seconds...`);
+      await new Promise(resolve => setTimeout(resolve, 2000));
     }
   }
 
@@ -830,8 +846,7 @@ async function autoFetchSubtitles(tmdbId, mediaType, season, episode) {
     throw new Error("Failed to reach the SubDL API (Network or CORS blocked). Please use Manual Search.");
   }
 
-  const subs = data.subtitles || data.results || [];
-  if (!data.status || subs.length === 0) throw new Error("No English subtitles found.");
+  if (subs.length === 0) throw new Error("No English subtitles found.");
 
   // Intelligently prioritize WEB-DL / WEBRip releases since those match streaming sites
   const preferredZipUrls = [];

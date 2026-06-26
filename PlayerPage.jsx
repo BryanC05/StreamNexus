@@ -28,6 +28,16 @@ export default function PlayerPage() {
   const [subtitleOffset, setSubtitleOffset] = useState(0);
   const [subPosition, setSubPosition] = useState('');
   const [customVideoUrl, setCustomVideoUrl] = useState('');
+  const [subtitleSize, setSubtitleSize] = useState(readStore('subtitle_size', '100%'));
+  const [customDomain, setCustomDomain] = useState(() => readStore('custom_embed_domain', ''));
+
+  useEffect(() => {
+    writeStore('subtitle_size', subtitleSize);
+  }, [subtitleSize]);
+
+  useEffect(() => {
+    writeStore('custom_embed_domain', customDomain);
+  }, [customDomain]);
 
   // Sync state with URL search parameters to support hot-swapping and refreshes without blank screens
   useEffect(() => {
@@ -583,8 +593,9 @@ export default function PlayerPage() {
   };
 
   const buildEmbedUrl = () => {
-    let path = `${server}/movie/${tmdbId}`;
-    if (mediaType === 'tv') path = `${server}/tv/${tmdbId}/${season}/${episode}`;
+    const activeServer = server === 'custom_domain' ? customDomain : server;
+    let path = `${activeServer}/movie/${tmdbId}`;
+    if (mediaType === 'tv') path = `${activeServer}/tv/${tmdbId}/${season}/${episode}`;
     const query = new URLSearchParams();
     if (color) query.set('color', color.replace('#', ''));
     if (autoPlay) query.set('autoPlay', 'true');
@@ -622,6 +633,15 @@ export default function PlayerPage() {
 
   return (
     <main className={`player-shell ${lightsOut ? 'lights-out' : ''}`}>
+      <style>{`
+        video::cue {
+          font-size: ${subtitleSize} !important;
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
       {lightsOut && <div className="lights-out-overlay" onClick={() => setLightsOut(false)} />}
       <header className="player-topbar">
         <Link className="secondary-button" to="/">Home</Link>
@@ -678,49 +698,81 @@ export default function PlayerPage() {
           <form className="control-grid">
             <label className="field"><span>Server Provider</span>
               <select value={server} onChange={(e) => { setServer(e.target.value); writeStore(SERVER_KEY, e.target.value); }}>
-                <option value="https://vidsrc.me/embed">VidSrc.me (Most Reliable)</option>
-                <option value="https://vidsrc.in/embed">VidSrc.in</option>
-                <option value="https://vidsrc.pm/embed">VidSrc.pm</option>
-                <option value="https://www.vidking.net/embed">Vidking</option>
-                <option value="custom">Custom HTML5 Player</option>
+                <optgroup label="Standard Multiservers">
+                  <option value="https://vidsrc.me/embed">VidSrc.me (Most Reliable)</option>
+                  <option value="https://vidsrc.in/embed">VidSrc.in</option>
+                  <option value="https://vidsrc.pm/embed">VidSrc.pm</option>
+                  <option value="https://www.vidking.net/embed">Vidking</option>
+                </optgroup>
+                <optgroup label="Advanced Players">
+                  <option value="custom_domain">Custom Embed Domain...</option>
+                  <option value="custom">Custom HTML5 Video Player</option>
+                </optgroup>
               </select>
             </label>
+            {server === 'custom_domain' && (
+              <label className="field" style={{ gridColumn: '1 / -1' }}>
+                <span>Custom Embed Server URL (e.g. https://domain.xyz/embed)</span>
+                <input 
+                  type="url" 
+                  placeholder="https://myprovider.to/embed" 
+                  value={customDomain} 
+                  onChange={(e) => setCustomDomain(e.target.value)} 
+                />
+              </label>
+            )}
             {server === 'custom' && (
-              <>
-                <label className="field" style={{ gridColumn: '1 / -1' }}><span>Custom Video Source (Local File or Direct URL)</span>
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <input type="text" placeholder="https://example.com/video.mp4" value={customVideoUrl} onChange={e => setCustomVideoUrl(e.target.value)} style={{ flex: 1 }} />
-                    <input type="file" accept="video/*" onChange={e => {
-                      if (e.target.files.length > 0) setCustomVideoUrl(URL.createObjectURL(e.target.files[0]));
-                    }} style={{ flex: 1 }} />
-                  </div>
-                </label>
-                <label className="field" style={{ gridColumn: '1 / -1' }}><span>Upload Custom Subtitle File (SRT or VTT)</span>
-                  <input type="file" accept=".vtt,.srt" onChange={e => {
-                    if (e.target.files.length > 0) {
-                      const file = e.target.files[0];
-                      const reader = new FileReader();
-                      reader.onload = (evt) => {
-                        const normalized = normalizeSubtitleText(evt.target.result);
-                        setSubtitleText(normalized);
-                        setSubtitleOffset(0);
-                        setSubPosition('');
-                        alert("Custom subtitle loaded successfully!");
-                      };
-                      reader.readAsText(file);
-                    }
-                  }} />
-                </label>
-              </>
+              <label className="field" style={{ gridColumn: '1 / -1' }}><span>Custom Video Source (Local File or Direct URL)</span>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <input type="text" placeholder="https://example.com/video.mp4" value={customVideoUrl} onChange={e => setCustomVideoUrl(e.target.value)} style={{ flex: 1 }} />
+                  <input type="file" accept="video/*" onChange={e => {
+                    if (e.target.files.length > 0) setCustomVideoUrl(URL.createObjectURL(e.target.files[0]));
+                  }} style={{ flex: 1 }} />
+                </div>
+              </label>
             )}
             <label className="field"><span>TMDB ID</span><input type="number" value={tmdbId} onChange={e => setTmdbId(e.target.value)} /></label>
             <label className="field"><span>External Subtitle URL</span><input type="url" placeholder="https://... (.vtt or .srt)" value={subUrl} onChange={e => setSubUrl(e.target.value)} /></label>
             <div className="field" style={{ gridColumn: '1 / -1' }}>
               <span>Subtitles Helper</span>
               <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                <button type="button" className="secondary-button" onClick={handleAutoFetchSubtitles} disabled={isFetchingSubs} style={{ flex: 1 }}>{isFetchingSubs ? "Fetching..." : "Auto-Fetch Subtitles"}</button>
-                <button type="button" className="secondary-button" onClick={handleFindSubtitles} style={{ flex: 1 }}>Manual Search</button>
+                <button type="button" className="secondary-button" onClick={handleAutoFetchSubtitles} disabled={isFetchingSubs} style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                  {isFetchingSubs ? (
+                    <>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}><circle cx="12" cy="12" r="10" strokeDasharray="30" strokeDashoffset="10"/></svg>
+                      <span>Fetching...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.886L4.202 9l5.886 1.912L12 16.798l1.912-5.886 5.886-1.912-5.886-1.912zm0 13.798 1.912 5.886L19.798 21l-5.886-1.912L12 13.202zm-8.298 4.7L5.886 21 12 19.088l-5.886-1.912z"/></svg>
+                      <span>Auto-Fetch</span>
+                    </>
+                  )}
+                </button>
+                <button type="button" className="secondary-button" onClick={handleFindSubtitles} style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <span>Manual Search</span>
+                </button>
               </div>
+              
+              <label style={{ display: 'block', margin: '8px 0 12px 0', cursor: 'pointer' }}>
+                <span style={{ display: 'block', fontSize: '0.8rem', color: '#ccc', marginBottom: '4px' }}>Upload Custom Subtitle File (SRT or VTT)</span>
+                <input type="file" accept=".vtt,.srt" onChange={e => {
+                  if (e.target.files.length > 0) {
+                    const file = e.target.files[0];
+                    const reader = new FileReader();
+                    reader.onload = (evt) => {
+                      const normalized = normalizeSubtitleText(evt.target.result);
+                      setSubtitleText(normalized);
+                      setSubtitleOffset(0);
+                      setSubPosition('');
+                      alert("Custom subtitle loaded successfully!");
+                    };
+                    reader.readAsText(file);
+                  }
+                }} style={{ fontSize: '0.8rem', display: 'block', width: '100%', padding: '6px', background: '#111', border: '1px dashed rgba(212, 175, 55, 0.4)', borderRadius: '4px', color: '#aaa' }} />
+              </label>
+
               <p style={{ margin: '0 0 12px 0', fontSize: '0.8rem' }}>Instantly download subtitles, then upload them using the video player's CC button.</p>
 
               <button 
@@ -729,7 +781,10 @@ export default function PlayerPage() {
                 style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', padding: '10px 14px', border: '1px solid rgba(212, 175, 55, 0.4)', background: 'rgba(212, 175, 55, 0.05)', color: 'var(--gold-light)', marginBottom: '8px' }} 
                 onClick={() => setShowSubtitleTools(!showSubtitleTools)}
               >
-                <span>🛠️ Subtitle Tools & Sync Resources</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                  <span>Subtitle Tools & Sync Resources</span>
+                </span>
                 <span>{showSubtitleTools ? '▲' : '▼'}</span>
               </button>
 
@@ -832,68 +887,205 @@ export default function PlayerPage() {
                 </div>
               )}
 
-              {subtitleText && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.1)', marginTop: '8px' }}>
-                  <span style={{ fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--gold-light)' }}>Customize Subtitles</span>
-                  
-                  {/* Tab Selector */}
-                  <div style={{ display: 'flex', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', marginBottom: '8px', paddingBottom: '4px', gap: '4px', overflowX: 'auto' }}>
-                    <button type="button" onClick={() => setActiveSubTab('sync')} style={{ flex: 1, minHeight: '30px', fontSize: '0.75rem', padding: '4px 6px', background: activeSubTab === 'sync' ? 'rgba(212, 175, 55, 0.15)' : 'transparent', color: activeSubTab === 'sync' ? 'var(--gold-light)' : '#888', borderColor: activeSubTab === 'sync' ? 'var(--gold)' : 'transparent' }}>Sync</button>
-                    <button type="button" onClick={() => setActiveSubTab('stretch')} style={{ flex: 1, minHeight: '30px', fontSize: '0.75rem', padding: '4px 6px', background: activeSubTab === 'stretch' ? 'rgba(212, 175, 55, 0.15)' : 'transparent', color: activeSubTab === 'stretch' ? 'var(--gold-light)' : '#888', borderColor: activeSubTab === 'stretch' ? 'var(--gold)' : 'transparent' }}>Stretch</button>
-                    <button type="button" onClick={() => setActiveSubTab('clean')} style={{ flex: 1, minHeight: '30px', fontSize: '0.75rem', padding: '4px 6px', background: activeSubTab === 'clean' ? 'rgba(212, 175, 55, 0.15)' : 'transparent', color: activeSubTab === 'clean' ? 'var(--gold-light)' : '#888', borderColor: activeSubTab === 'clean' ? 'var(--gold)' : 'transparent' }}>Clean</button>
-                    <button type="button" onClick={() => setActiveSubTab('replace')} style={{ flex: 1, minHeight: '30px', fontSize: '0.75rem', padding: '4px 6px', background: activeSubTab === 'replace' ? 'rgba(212, 175, 55, 0.15)' : 'transparent', color: activeSubTab === 'replace' ? 'var(--gold-light)' : '#888', borderColor: activeSubTab === 'replace' ? 'var(--gold)' : 'transparent' }}>Replace</button>
-                    <button type="button" onClick={() => setActiveSubTab('export')} style={{ flex: 1, minHeight: '30px', fontSize: '0.75rem', padding: '4px 6px', background: activeSubTab === 'export' ? 'rgba(212, 175, 55, 0.15)' : 'transparent', color: activeSubTab === 'export' ? 'var(--gold-light)' : '#888', borderColor: activeSubTab === 'export' ? 'var(--gold)' : 'transparent' }}>Export</button>
-                  </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.1)', marginTop: '8px' }}>
+                <span style={{ fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--gold-light)' }}>Customize Subtitles</span>
+                
+                {/* Tab Selector */}
+                <div style={{ display: 'flex', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', marginBottom: '8px', gap: '4px', overflowX: 'auto', paddingBottom: '8px' }}>
+                  <button type="button" onClick={() => setActiveSubTab('sync')} style={{ 
+                    flex: '0 0 auto', 
+                    minHeight: '32px', 
+                    fontSize: '0.8rem', 
+                    padding: '6px 12px', 
+                    background: activeSubTab === 'sync' ? 'rgba(212, 175, 55, 0.15)' : 'transparent', 
+                    color: activeSubTab === 'sync' ? 'var(--gold-light)' : '#aaa', 
+                    borderColor: activeSubTab === 'sync' ? 'var(--gold)' : 'transparent',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    borderRadius: '4px',
+                    border: '1px solid',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span>Sync</span>
+                  </button>
+                  <button type="button" onClick={() => setActiveSubTab('style')} style={{ 
+                    flex: '0 0 auto', 
+                    minHeight: '32px', 
+                    fontSize: '0.8rem', 
+                    padding: '6px 12px', 
+                    background: activeSubTab === 'style' ? 'rgba(212, 175, 55, 0.15)' : 'transparent', 
+                    color: activeSubTab === 'style' ? 'var(--gold-light)' : '#aaa', 
+                    borderColor: activeSubTab === 'style' ? 'var(--gold)' : 'transparent',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    borderRadius: '4px',
+                    border: '1px solid',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                    <span>Style</span>
+                  </button>
+                  <button type="button" onClick={() => setActiveSubTab('stretch')} style={{ 
+                    flex: '0 0 auto', 
+                    minHeight: '32px', 
+                    fontSize: '0.8rem', 
+                    padding: '6px 12px', 
+                    background: activeSubTab === 'stretch' ? 'rgba(212, 175, 55, 0.15)' : 'transparent', 
+                    color: activeSubTab === 'stretch' ? 'var(--gold-light)' : '#aaa', 
+                    borderColor: activeSubTab === 'stretch' ? 'var(--gold)' : 'transparent',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    borderRadius: '4px',
+                    border: '1px solid',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12h16"/><path d="M17 9l3 3-3 3"/><path d="M7 9l-3 3 3 3"/></svg>
+                    <span>Stretch</span>
+                  </button>
+                  <button type="button" onClick={() => setActiveSubTab('clean')} style={{ 
+                    flex: '0 0 auto', 
+                    minHeight: '32px', 
+                    fontSize: '0.8rem', 
+                    padding: '6px 12px', 
+                    background: activeSubTab === 'clean' ? 'rgba(212, 175, 55, 0.15)' : 'transparent', 
+                    color: activeSubTab === 'clean' ? 'var(--gold-light)' : '#aaa', 
+                    borderColor: activeSubTab === 'clean' ? 'var(--gold)' : 'transparent',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    borderRadius: '4px',
+                    border: '1px solid',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.886L4.202 9l5.886 1.912L12 16.798l1.912-5.886 5.886-1.912-5.886-1.912zm0 13.798 1.912 5.886L19.798 21l-5.886-1.912L12 13.202zm-8.298 4.7L5.886 21 12 19.088l-5.886-1.912z"/></svg>
+                    <span>Clean</span>
+                  </button>
+                  <button type="button" onClick={() => setActiveSubTab('replace')} style={{ 
+                    flex: '0 0 auto', 
+                    minHeight: '32px', 
+                    fontSize: '0.8rem', 
+                    padding: '6px 12px', 
+                    background: activeSubTab === 'replace' ? 'rgba(212, 175, 55, 0.15)' : 'transparent', 
+                    color: activeSubTab === 'replace' ? 'var(--gold-light)' : '#aaa', 
+                    borderColor: activeSubTab === 'replace' ? 'var(--gold)' : 'transparent',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    borderRadius: '4px',
+                    border: '1px solid',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m7 21-4-4 4-4"/><path d="M21 21v-2a4 4 0 0 0-4-4H3"/><path d="m17 3 4 4-4 4"/><path d="M3 3v2a4 4 0 0 0 4 4h14"/></svg>
+                    <span>Replace</span>
+                  </button>
+                  <button type="button" onClick={() => setActiveSubTab('export')} style={{ 
+                    flex: '0 0 auto', 
+                    minHeight: '32px', 
+                    fontSize: '0.8rem', 
+                    padding: '6px 12px', 
+                    background: activeSubTab === 'export' ? 'rgba(212, 175, 55, 0.15)' : 'transparent', 
+                    color: activeSubTab === 'export' ? 'var(--gold-light)' : '#aaa', 
+                    borderColor: activeSubTab === 'export' ? 'var(--gold)' : 'transparent',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    borderRadius: '4px',
+                    border: '1px solid',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    <span>Export</span>
+                  </button>
+                </div>
 
-                  {/* Tab contents */}
-                  {activeSubTab === 'sync' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      <div>
-                        <span style={{ fontSize: '0.8rem', display: 'block', marginBottom: '4px', color: '#ccc' }}>Sync Delay</span>
-                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                          <button type="button" className="secondary-button" style={{ padding: '4px 8px', fontSize: '0.8rem', minHeight: '30px' }} onClick={() => setSubtitleOffset(prev => prev - 1.0)}>-1.0s</button>
-                          <button type="button" className="secondary-button" style={{ padding: '4px 8px', fontSize: '0.8rem', minHeight: '30px' }} onClick={() => setSubtitleOffset(prev => prev - 0.5)}>-0.5s</button>
-                          <span style={{ flex: 1, textAlign: 'center', fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--gold-light)' }}>
-                            Offset: {subtitleOffset > 0 ? `+${subtitleOffset.toFixed(1)}` : `${subtitleOffset.toFixed(1)}`}s
-                          </span>
-                          <button type="button" className="secondary-button" style={{ padding: '4px 8px', fontSize: '0.8rem', minHeight: '30px' }} onClick={() => setSubtitleOffset(prev => prev + 0.5)}>+0.5s</button>
-                          <button type="button" className="secondary-button" style={{ padding: '4px 8px', fontSize: '0.8rem', minHeight: '30px' }} onClick={() => setSubtitleOffset(prev => prev + 1.0)}>+1.0s</button>
-                          <button type="button" className="secondary-button" style={{ padding: '4px 8px', fontSize: '0.8rem', minHeight: '30px' }} onClick={() => setSubtitleOffset(0)}>Reset</button>
-                        </div>
-                      </div>
-
-                      <div>
-                        <span style={{ fontSize: '0.8rem', display: 'block', marginBottom: '4px', color: '#ccc' }}>Vertical Position (Adjust if subtitles are too low or high)</span>
-                        <select value={subPosition} onChange={(e) => setSubPosition(e.target.value)} style={{ width: '100%', padding: '8px', fontSize: '0.85rem', background: '#111', color: '#fff', border: '1px solid var(--gold)', borderRadius: '4px' }}>
-                          <option value="">Default (Player Bottom)</option>
-                          <optgroup label="Percentage from Top (VidSrc / Custom Player)">
-                            <option value="90%">90% (Slightly Raised)</option>
-                            <option value="85%">85% (Raised)</option>
-                            <option value="80%">80% (Highly Raised)</option>
-                            <option value="75%">75% (Very High)</option>
-                            <option value="70%">70% (Upper Middle)</option>
-                            <option value="60%">60% (Lower Middle)</option>
-                            <option value="50%">50% (Center Screen)</option>
-                            <option value="10%">10% (Top of Screen)</option>
-                          </optgroup>
-                          <optgroup label="Line Offset (Highly Recommended for Vidking)">
-                            <option value="-2">Raised 1 Line (line:-2)</option>
-                            <option value="-3">Raised 2 Lines (line:-3)</option>
-                            <option value="-4">Raised 3 Lines (line:-4)</option>
-                            <option value="-5">Raised 4 Lines (line:-5)</option>
-                            <option value="-6">Raised 5 Lines (line:-6)</option>
-                            <option value="-7">Raised 6 Lines (line:-7)</option>
-                            <option value="-8">Raised 7 Lines (line:-8)</option>
-                            <option value="-9">Raised 8 Lines (line:-9)</option>
-                            <option value="-10">Raised 10 Lines (line:-10)</option>
-                            <option value="-15">Raised 15 Lines (line:-15)</option>
-                          </optgroup>
-                        </select>
+                {/* Tab contents */}
+                {activeSubTab === 'sync' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div>
+                      <span style={{ fontSize: '0.8rem', display: 'block', marginBottom: '4px', color: '#ccc' }}>Sync Delay</span>
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                        <button type="button" className="secondary-button" style={{ padding: '4px 8px', fontSize: '0.8rem', minHeight: '30px' }} onClick={() => setSubtitleOffset(prev => prev - 1.0)}>-1.0s</button>
+                        <button type="button" className="secondary-button" style={{ padding: '4px 8px', fontSize: '0.8rem', minHeight: '30px' }} onClick={() => setSubtitleOffset(prev => prev - 0.5)}>-0.5s</button>
+                        <span style={{ flex: 1, textAlign: 'center', fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--gold-light)' }}>
+                          Offset: {subtitleOffset > 0 ? `+${subtitleOffset.toFixed(1)}` : `${subtitleOffset.toFixed(1)}`}s
+                        </span>
+                        <button type="button" className="secondary-button" style={{ padding: '4px 8px', fontSize: '0.8rem', minHeight: '30px' }} onClick={() => setSubtitleOffset(prev => prev + 0.5)}>+0.5s</button>
+                        <button type="button" className="secondary-button" style={{ padding: '4px 8px', fontSize: '0.8rem', minHeight: '30px' }} onClick={() => setSubtitleOffset(prev => prev + 1.0)}>+1.0s</button>
+                        <button type="button" className="secondary-button" style={{ padding: '4px 8px', fontSize: '0.8rem', minHeight: '30px' }} onClick={() => setSubtitleOffset(0)}>Reset</button>
                       </div>
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  {activeSubTab === 'stretch' && (
+                {activeSubTab === 'style' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <span style={{ fontSize: '0.8rem', color: '#ccc' }}>Subtitle Size (Custom Player Only)</span>
+                      <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        <input 
+                          type="range" 
+                          min="50" 
+                          max="300" 
+                          step="10" 
+                          value={parseInt(subtitleSize) || 100} 
+                          onChange={(e) => setSubtitleSize(`${e.target.value}%`)} 
+                          style={{ flex: 1, accentColor: 'var(--gold)' }}
+                        />
+                        <span style={{ fontSize: '0.9rem', fontWeight: 'bold', minWidth: '45px', textAlign: 'right', color: 'var(--gold-light)' }}>
+                          {subtitleSize}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <span style={{ fontSize: '0.8rem', display: 'block', marginBottom: '4px', color: '#ccc' }}>Vertical Position</span>
+                      <select value={subPosition} onChange={(e) => setSubPosition(e.target.value)} style={{ width: '100%', padding: '8px', fontSize: '0.85rem', background: '#111', color: '#fff', border: '1px solid var(--gold)', borderRadius: '4px' }}>
+                        <option value="">Default (Player Bottom)</option>
+                        <optgroup label="Percentage from Top (VidSrc / Custom Player)">
+                          <option value="90%">90% (Slightly Raised)</option>
+                          <option value="85%">85% (Raised)</option>
+                          <option value="80%">80% (Highly Raised)</option>
+                          <option value="75%">75% (Very High)</option>
+                          <option value="70%">70% (Upper Middle)</option>
+                          <option value="60%">60% (Lower Middle)</option>
+                          <option value="50%">50% (Center Screen)</option>
+                          <option value="10%">10% (Top of Screen)</option>
+                        </optgroup>
+                        <optgroup label="Line Offset (Highly Recommended for Vidking)">
+                          <option value="-2">Raised 1 Line (line:-2)</option>
+                          <option value="-3">Raised 2 Lines (line:-3)</option>
+                          <option value="-4">Raised 3 Lines (line:-4)</option>
+                          <option value="-5">Raised 4 Lines (line:-5)</option>
+                          <option value="-6">Raised 5 Lines (line:-6)</option>
+                          <option value="-7">Raised 6 Lines (line:-7)</option>
+                          <option value="-8">Raised 7 Lines (line:-8)</option>
+                          <option value="-9">Raised 8 Lines (line:-9)</option>
+                          <option value="-10">Raised 10 Lines (line:-10)</option>
+                          <option value="-15">Raised 15 Lines (line:-15)</option>
+                        </optgroup>
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {activeSubTab === 'stretch' && (
+                  !subtitleText ? (
+                    <div style={{ padding: '20px', textAlign: 'center', color: '#888', border: '1px dashed rgba(255, 255, 255, 0.15)', borderRadius: '6px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ opacity: 0.5 }}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#ccc' }}>Subtitles Required</span>
+                      <p style={{ margin: 0, fontSize: '0.75rem', opacity: 0.8, maxWidth: '240px', lineHeight: '1.4' }}>Drift/stretch adjustment requires loaded subtitles. Please auto-fetch or upload a file first.</p>
+                    </div>
+                  ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       <span style={{ fontSize: '0.8rem', color: '#ccc' }}>Fix drifting subtitles. Adjust speed factor to stretch/shrink timings.</span>
                       <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
@@ -912,9 +1104,17 @@ export default function PlayerPage() {
                         <button type="button" className="secondary-button" style={{ minHeight: '30px', fontSize: '0.75rem', padding: '2px' }} onClick={() => setTimeStretchFactor('1.001000')}>NTSC Speedup</button>
                       </div>
                     </div>
-                  )}
+                  )
+                )}
 
-                  {activeSubTab === 'clean' && (
+                {activeSubTab === 'clean' && (
+                  !subtitleText ? (
+                    <div style={{ padding: '20px', textAlign: 'center', color: '#888', border: '1px dashed rgba(255, 255, 255, 0.15)', borderRadius: '6px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ opacity: 0.5 }}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#ccc' }}>Subtitles Required</span>
+                      <p style={{ margin: 0, fontSize: '0.75rem', opacity: 0.8, maxWidth: '240px', lineHeight: '1.4' }}>SDH cleaning and case conversion require loaded subtitles. Please auto-fetch or upload a file first.</p>
+                    </div>
+                  ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                       <span style={{ fontSize: '0.8rem', color: '#ccc' }}>Clean hearing-impaired SDH captions (e.g. `[music]`, `(gasp)`) or format text case.</span>
                       <button 
@@ -936,9 +1136,17 @@ export default function PlayerPage() {
                         <button type="button" className="secondary-button" style={{ flex: 1, minHeight: '32px', fontSize: '0.75rem' }} onClick={() => { setSubtitleText(convertTextCase(subtitleText, 'sentence')); alert("Converted to Sentence case!"); }}>Sentence case</button>
                       </div>
                     </div>
-                  )}
+                  )
+                )}
 
-                  {activeSubTab === 'replace' && (
+                {activeSubTab === 'replace' && (
+                  !subtitleText ? (
+                    <div style={{ padding: '20px', textAlign: 'center', color: '#888', border: '1px dashed rgba(255, 255, 255, 0.15)', borderRadius: '6px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ opacity: 0.5 }}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#ccc' }}>Subtitles Required</span>
+                      <p style={{ margin: 0, fontSize: '0.75rem', opacity: 0.8, maxWidth: '240px', lineHeight: '1.4' }}>Find & Replace requires loaded subtitles. Please auto-fetch or upload a file first.</p>
+                    </div>
+                  ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       <span style={{ fontSize: '0.8rem', color: '#ccc' }}>Find and replace terms within the loaded subtitles.</span>
                       <input 
@@ -971,9 +1179,17 @@ export default function PlayerPage() {
                         🔄 Replace All
                       </button>
                     </div>
-                  )}
+                  )
+                )}
 
-                  {activeSubTab === 'export' && (
+                {activeSubTab === 'export' && (
+                  !subtitleText ? (
+                    <div style={{ padding: '20px', textAlign: 'center', color: '#888', border: '1px dashed rgba(255, 255, 255, 0.15)', borderRadius: '6px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ opacity: 0.5 }}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#ccc' }}>Subtitles Required</span>
+                      <p style={{ margin: 0, fontSize: '0.75rem', opacity: 0.8, maxWidth: '240px', lineHeight: '1.4' }}>Exporting requires loaded subtitles. Please auto-fetch or upload a file first.</p>
+                    </div>
+                  ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       <span style={{ fontSize: '0.8rem', color: '#ccc' }}>Download the customized subtitle file to your device in either WebVTT or SRT format.</span>
                       <div style={{ display: 'flex', gap: '8px' }}>
@@ -995,9 +1211,9 @@ export default function PlayerPage() {
                         </button>
                       </div>
                     </div>
-                  )}
-                </div>
-              )}
+                  )
+                )}
+              </div>
             </div>
           </form>
 
