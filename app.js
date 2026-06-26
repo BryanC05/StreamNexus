@@ -980,6 +980,9 @@ async function autoFetchSubtitles(tmdbId, mediaType, season, episode) {
   // Strip HTML styling tags which often cause web players to merge words together
   text = text.replace(/<\/?(?:i|b|u|font|color)[^>]*>/gi, '');
 
+  // Strip curly braces style tags like {\an8}, {/an8}, {y:i}, etc.
+  text = text.replace(/\{[^}]*\}/g, '');
+
   const isVtt = text.startsWith("WEBVTT");
 
   // Add a trailing space to dialogue lines. This prevents words from combining 
