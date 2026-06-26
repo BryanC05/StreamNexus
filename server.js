@@ -11,7 +11,9 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 5001;
-const DB_FILE = path.join(__dirname, 'database.json');
+const DB_FILE = process.env.VERCEL === '1'
+  ? path.join('/tmp', 'database.json')
+  : path.join(__dirname, 'database.json');
 const JWT_SECRET = process.env.JWT_SECRET || 'streamnexus_secret_key_1337';
 
 app.use(cors());
@@ -20,7 +22,22 @@ app.use(express.json());
 // Initialize file database
 function getDb() {
   if (!fs.existsSync(DB_FILE)) {
-    fs.writeFileSync(DB_FILE, JSON.stringify({ users: {} }, null, 2));
+    if (process.env.VERCEL === '1') {
+      const originalDbFile = path.join(__dirname, 'database.json');
+      if (fs.existsSync(originalDbFile)) {
+        try {
+          const content = fs.readFileSync(originalDbFile, 'utf-8');
+          fs.writeFileSync(DB_FILE, content);
+        } catch (err) {
+          console.error('Failed to copy database file to /tmp:', err);
+          fs.writeFileSync(DB_FILE, JSON.stringify({ users: {} }, null, 2));
+        }
+      } else {
+        fs.writeFileSync(DB_FILE, JSON.stringify({ users: {} }, null, 2));
+      }
+    } else {
+      fs.writeFileSync(DB_FILE, JSON.stringify({ users: {} }, null, 2));
+    }
   }
   try {
     return JSON.parse(fs.readFileSync(DB_FILE, 'utf-8'));
@@ -213,6 +230,10 @@ app.post('/api/user/clear', authenticateToken, (req, res) => {
   res.json({ success: true });
 });
 
-app.listen(PORT, () => {
-  console.log(`StreamNexus Auth & Sync Server running on port ${PORT}`);
-});
+if (process.env.VERCEL !== '1') {
+  app.listen(PORT, () => {
+    console.log(`StreamNexus Auth & Sync Server running on port ${PORT}`);
+  });
+}
+
+export default app;

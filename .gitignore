@@ -7,6 +7,7 @@ web_modules/
 dist/
 dist-ssr/
 build/
+.vercel/
 
 # Logs
 npm-debug.log*
