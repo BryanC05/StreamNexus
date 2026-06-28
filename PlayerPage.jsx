@@ -81,6 +81,21 @@ export default function PlayerPage() {
     writeStore('subtitle_size', subtitleSize);
   }, [subtitleSize]);
 
+  // Effect to force-refresh subtitle styles in Chromium by toggling track modes
+  useEffect(() => {
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+    const tracks = video.textTracks;
+    for (let i = 0; i < tracks.length; i++) {
+      if (tracks[i].mode === 'showing') {
+        tracks[i].mode = 'hidden';
+        setTimeout(() => {
+          if (tracks[i]) tracks[i].mode = 'showing';
+        }, 15);
+      }
+    }
+  }, [subtitleSize]);
+
   useEffect(() => {
     writeStore('custom_embed_domain', customDomain);
   }, [customDomain]);
@@ -810,11 +825,16 @@ export default function PlayerPage() {
   };
 
   return (
-    <main className={`player-shell ${lightsOut ? 'lights-out' : ''}`}>
+    <main 
+      className={`player-shell ${lightsOut ? 'lights-out' : ''}`}
+      style={{
+        '--sub-size': `calc((1.25rem + 0.3vw) * ${parseFloat(subtitleSize) / 100})`
+      }}
+    >
       <style>{`
         ::cue,
         video::cue {
-          font-size: calc((1.25rem + 0.3vw) * ${parseFloat(subtitleSize) / 100}) !important;
+          font-size: var(--sub-size, 24px) !important;
           background: rgba(0, 0, 0, 0.75) !important;
           color: #ffffff !important;
           text-shadow: 1px 1px 2px #000, -1px -1px 2px #000, 1px -1px 2px #000, -1px 1px 2px #000 !important;
@@ -823,7 +843,7 @@ export default function PlayerPage() {
           padding: 2px 6px !important;
         }
         video::-webkit-media-text-track-display {
-          font-size: calc((1.25rem + 0.3vw) * ${parseFloat(subtitleSize) / 100}) !important;
+          font-size: var(--sub-size, 24px) !important;
           background: rgba(0, 0, 0, 0.75) !important;
           color: #ffffff !important;
           text-shadow: 1px 1px 2px #000, -1px -1px 2px #000, 1px -1px 2px #000, -1px 1px 2px #000 !important;
