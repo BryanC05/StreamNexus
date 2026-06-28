@@ -143,7 +143,6 @@ export default function ProfilePage() {
   const favorites = getFavorites();
   const history = getHistory();
   const progressItems = Object.values(getProgressStore()).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-  const continueItems = progressItems.filter(item => (item.progress || 0) < 95);
 
   return (
     <main className="profile-shell">
@@ -173,15 +172,6 @@ export default function ProfilePage() {
         </article>
         <article className="stat-tile"><span>{formatDuration(getGlobalWatchTime())}</span><p>Watch Time</p></article>
       </section>
-
-      {continueItems.length > 0 && (
-        <section className="profile-section">
-          <div className="section-header">
-            <h2>Continue Watching</h2>
-          </div>
-          <ProfileList items={continueItems} emptyText="No active titles." />
-        </section>
-      )}
 
       <div className="profile-tabs" style={{ display: 'flex', gap: '12px', marginTop: '2rem', borderBottom: '1px solid var(--border-gold)', paddingBottom: '12px', marginBottom: '1.5rem' }}>
         <button 
