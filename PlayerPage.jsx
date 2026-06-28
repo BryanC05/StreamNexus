@@ -812,8 +812,27 @@ export default function PlayerPage() {
   return (
     <main className={`player-shell ${lightsOut ? 'lights-out' : ''}`}>
       <style>{`
+        ::cue,
         video::cue {
-          font-size: ${subtitleSize} !important;
+          font-size: calc((1.25rem + 0.3vw) * ${parseFloat(subtitleSize) / 100}) !important;
+          background: rgba(0, 0, 0, 0.75) !important;
+          color: #ffffff !important;
+          text-shadow: 1px 1px 2px #000, -1px -1px 2px #000, 1px -1px 2px #000, -1px 1px 2px #000 !important;
+          font-family: 'Outfit', 'Inter', sans-serif !important;
+          border-radius: 4px !important;
+          padding: 2px 6px !important;
+        }
+        video::-webkit-media-text-track-display {
+          font-size: calc((1.25rem + 0.3vw) * ${parseFloat(subtitleSize) / 100}) !important;
+          background: rgba(0, 0, 0, 0.75) !important;
+          color: #ffffff !important;
+          text-shadow: 1px 1px 2px #000, -1px -1px 2px #000, 1px -1px 2px #000, -1px 1px 2px #000 !important;
+          font-family: 'Outfit', 'Inter', sans-serif !important;
+          border-radius: 4px !important;
+          padding: 2px 6px !important;
+        }
+        video::-webkit-media-text-track-container {
+          overflow: visible !important;
         }
         @keyframes spin {
           from { transform: rotate(0deg); }
