@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   DEFAULT_TMDB_KEY, getCachedCatalog, getActiveCatalog, catalog,
@@ -36,7 +36,7 @@ function PosterCard({ item, forceRender }) {
     <article className="poster-card">
       <span className="poster-media">
         <Link className="poster-image-link" to={buildHref()}>
-          <img src={item.poster} alt={`${item.title} poster`} loading="lazy" />
+          <img src={item.poster} alt={`${item.title} poster`} loading="lazy" draggable="false" />
         </Link>
         <button className={`favorite-button ${saved ? 'is-active' : ''}`} type="button" onClick={() => { toggleFavorite(favoriteEntry); forceRender(); }}>
           {saved ? "Saved" : "Favorite"}
@@ -69,17 +69,92 @@ const ALL_GENRES = [
   { id: 10759, name: "Action & Adventure" },
   { id: 10765, name: "Sci-Fi & Fantasy" },
   { id: 10762, name: "Kids" },
-  { id: 10764, name: "Reality" }
+  { id: 10764, name: "Reality" },
+  { id: 99999, name: "Anime" },
+  { id: 88888, name: "K-Drama" }
 ].sort((a, b) => a.name.localeCompare(b.name));
 
 function GenreRow({ title, items, forceRender }) {
   if (!items || items.length === 0) return null;
+
+  const [visibleCount, setVisibleCount] = useState(25);
+  const rowRef = useRef(null);
+  const isDragging = useRef(false);
+  const startX = useRef(0);
+  const scrollLeft = useRef(0);
+  const hasMoved = useRef(false);
+
+  const handleMouseDown = (e) => {
+    isDragging.current = true;
+    hasMoved.current = false;
+    startX.current = e.pageX - rowRef.current.offsetLeft;
+    scrollLeft.current = rowRef.current.scrollLeft;
+    rowRef.current.style.cursor = 'grabbing';
+    rowRef.current.style.scrollBehavior = 'auto';
+    rowRef.current.style.scrollSnapType = 'none';
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging.current) return;
+    const x = e.pageX - rowRef.current.offsetLeft;
+    const walk = (x - startX.current) * 1.5;
+    if (Math.abs(walk) > 8) {
+      hasMoved.current = true;
+    }
+    rowRef.current.scrollLeft = scrollLeft.current - walk;
+    handleScroll();
+  };
+
+  const handleMouseUpOrLeave = () => {
+    if (!isDragging.current) return;
+    isDragging.current = false;
+    rowRef.current.style.cursor = 'grab';
+    rowRef.current.style.scrollBehavior = 'smooth';
+    rowRef.current.style.scrollSnapType = 'x mandatory';
+  };
+
+  const handleClickCapture = (e) => {
+    if (hasMoved.current) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
+  const handleScroll = () => {
+    if (!rowRef.current) return;
+    const { scrollLeft: sLeft, clientWidth, scrollWidth } = rowRef.current;
+    if (sLeft + clientWidth >= scrollWidth - 500) {
+      setVisibleCount(prev => Math.min(prev + 25, items.length));
+    }
+  };
+
+  const displayed = items.slice(0, visibleCount);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
       <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.25rem' }}>{title}</h3>
-      <div style={{ display: 'flex', gap: '18px', overflowX: 'auto', paddingBottom: '1rem', scrollSnapType: 'x mandatory' }}>
-        {items.map((item, idx) => (
-          <div key={`${item.id}-${idx}`} style={{ flex: '0 0 170px', scrollSnapAlign: 'start' }}>
+      <div 
+        ref={rowRef}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUpOrLeave}
+        onMouseLeave={handleMouseUpOrLeave}
+        onScroll={handleScroll}
+        onClickCapture={handleClickCapture}
+        onDragStart={(e) => e.preventDefault()}
+        style={{ 
+          display: 'flex', 
+          gap: '18px', 
+          overflowX: 'auto', 
+          paddingBottom: '1rem', 
+          scrollSnapType: 'x mandatory',
+          cursor: 'grab',
+          userSelect: 'none',
+          WebkitUserSelect: 'none'
+        }}
+      >
+        {displayed.map((item, idx) => (
+          <div key={`${item.id}-${idx}`} style={{ flex: '0 0 170px', scrollSnapAlign: 'start', pointerEvents: 'auto' }}>
             <PosterCard item={item} forceRender={forceRender} />
           </div>
         ))}
@@ -166,6 +241,13 @@ export default function SelectionPage() {
   const combinedItems = [...movies, ...tvShows];
 
   let items = searchQuery.trim() ? searchResults : combinedItems;
+
+  // Deduplicate items by unique mediaType and ID to prevent duplicate show rendering
+  const uniqueMap = new Map();
+  items.forEach(item => {
+    uniqueMap.set(`${item.mediaType || 'movie'}:${item.id}`, item);
+  });
+  items = Array.from(uniqueMap.values());
   
   if (filterMediaType !== 'all') {
     items = items.filter(item => item.mediaType === filterMediaType);
@@ -324,12 +406,12 @@ export default function SelectionPage() {
           </>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', marginTop: '1rem' }}>
-            <GenreRow title="Trending Hits" items={items.slice(0, 25)} forceRender={forceRender} />
+            <GenreRow title="Trending Hits" items={items} forceRender={forceRender} />
             {ALL_GENRES.map(genre => (
               <GenreRow 
                 key={genre.id} 
                 title={genre.name} 
-                items={items.filter(item => item.genreIds?.includes(genre.id)).slice(0, 25)} 
+                items={items.filter(item => item.genreIds?.includes(genre.id))} 
                 forceRender={forceRender} 
               />
             ))}

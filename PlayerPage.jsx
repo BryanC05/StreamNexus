@@ -4,9 +4,51 @@ import {
   DEFAULT_TMDB_KEY, TMDB_API_URL, TMDB_IMAGE_URL, getTmdbHeaders,
   getTitleFromEntry, isFavorite, toggleFavorite, saveProgress,
   getSavedProgress, SERVER_KEY, readStore, writeStore, autoFetchSubtitles,
-  uploadSubtitleToTempHost,
+  uploadSubtitleToTempHost, fetchRecommendations, fetchReviews, fetchTmdbReviews, submitReview,
+  isLoggedIn
 } from './app.js';
 import './royal-theme.css';
+
+function ReviewItemComponent({ rev }) {
+  const [expanded, setExpanded] = useState(false);
+  const isLong = rev.text && rev.text.length > 300;
+  const displayText = expanded ? rev.text : (isLong ? rev.text.slice(0, 300) + '...' : rev.text);
+
+  return (
+    <article style={{ background: 'rgba(255,255,255,0.03)', borderLeft: rev.isTmdb ? '3px solid #01b4e4' : '3px solid var(--metaphor-gold)', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <strong style={{ color: rev.isTmdb ? '#01b4e4' : 'var(--gold-light)', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span>👤 {rev.username}</span>
+          {rev.isTmdb && (
+            <span style={{ fontSize: '0.65rem', background: 'rgba(1, 180, 228, 0.12)', border: '1px solid #01b4e4', padding: '1px 6px', borderRadius: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#01b4e4' }}>
+              TMDB Author
+            </span>
+          )}
+        </strong>
+        <span style={{ color: 'var(--parchment-dim)', fontSize: '0.75rem' }}>{new Date(rev.createdAt).toLocaleDateString()}</span>
+      </div>
+      {rev.rating !== null && rev.rating !== undefined && (
+        <div style={{ color: rev.isTmdb ? '#01b4e4' : 'var(--metaphor-gold)', fontSize: '0.9rem' }}>
+          {'★'.repeat(rev.rating)}{'☆'.repeat(5 - rev.rating)}
+        </div>
+      )}
+      {rev.text && (
+        <div style={{ margin: 0, color: 'var(--parchment)', fontSize: '0.9rem', lineHeight: '1.4', fontStyle: rev.isTmdb ? 'normal' : 'italic', whiteSpace: 'pre-line' }}>
+          {displayText}
+          {isLong && (
+            <button 
+              type="button" 
+              onClick={() => setExpanded(!expanded)} 
+              style={{ background: 'none', border: 'none', color: rev.isTmdb ? '#01b4e4' : 'var(--gold)', cursor: 'pointer', padding: '0 4px', textDecoration: 'underline', fontSize: '0.85rem', display: 'inline' }}
+            >
+              {expanded ? 'Show Less' : 'Show More'}
+            </button>
+          )}
+        </div>
+      )}
+    </article>
+  );
+}
 
 export default function PlayerPage() {
   const [params, setParams] = useSearchParams();
@@ -30,6 +72,10 @@ export default function PlayerPage() {
   const [customVideoUrl, setCustomVideoUrl] = useState('');
   const [subtitleSize, setSubtitleSize] = useState(readStore('subtitle_size', '100%'));
   const [customDomain, setCustomDomain] = useState(() => readStore('custom_embed_domain', ''));
+
+  const getCurrentEntry = useCallback(() => {
+    return getTitleFromEntry({ id: tmdbId, mediaType, title, season, episode });
+  }, [tmdbId, mediaType, title, season, episode]);
 
   useEffect(() => {
     writeStore('subtitle_size', subtitleSize);
@@ -60,6 +106,106 @@ export default function PlayerPage() {
     if (!tmdbId) return;
     setPlayerMeta(mediaType === 'tv' ? `TV Series - TMDB ${tmdbId}` : `Movie - TMDB ${tmdbId}`);
   }, [tmdbId, mediaType]);
+
+  const [recommendations, setRecommendations] = useState([]);
+
+  useEffect(() => {
+    if (!tmdbId) return;
+    setRecommendations([]);
+    fetchRecommendations(mediaType, tmdbId, DEFAULT_TMDB_KEY).then(res => {
+      setRecommendations(res || []);
+    });
+  }, [tmdbId, mediaType]);
+
+  const [reviews, setReviews] = useState([]);
+  const [tmdbReviews, setTmdbReviews] = useState([]);
+  const [tmdbRating, setTmdbRating] = useState(null);
+  const [userRating, setUserRating] = useState(5);
+  const [reviewText, setReviewText] = useState('');
+  const [reviewError, setReviewError] = useState('');
+  const [reviewSuccess, setReviewSuccess] = useState('');
+
+  const [detailsOpen, setDetailsOpen] = useState(true);
+  const [showDetails, setShowDetails] = useState(null);
+
+  useEffect(() => {
+    if (!tmdbId) return;
+    setShowDetails(null);
+  }, [tmdbId, mediaType]);
+
+  useEffect(() => {
+    if (showDetails) return;
+    if (!tmdbId) return;
+    const entry = getCurrentEntry();
+    if (entry) {
+      setShowDetails({
+        overview: "No detailed description available.",
+        releaseDate: entry.year ? `${entry.year}-01-01` : "",
+        genres: mediaType === "tv" ? "TV Show" : "Movie",
+        rating: null,
+        poster: entry.poster,
+        status: "",
+        tagline: ""
+      });
+    }
+  }, [tmdbId, mediaType, showDetails, getCurrentEntry]);
+
+  useEffect(() => {
+    if (!tmdbId) return;
+    setReviewText('');
+    setReviewError('');
+    setReviewSuccess('');
+    setTmdbRating(null);
+    
+    fetchReviews(mediaType, tmdbId).then(res => {
+      setReviews(res || []);
+    });
+
+    fetchTmdbReviews(mediaType, tmdbId, DEFAULT_TMDB_KEY).then(res => {
+      setTmdbReviews(res || []);
+    });
+  }, [tmdbId, mediaType]);
+
+  const handleReviewSubmit = async (e) => {
+    e.preventDefault();
+    setReviewError('');
+    setReviewSuccess('');
+    try {
+      await submitReview(mediaType, tmdbId, userRating, reviewText);
+      setReviewText('');
+      setReviewSuccess('Thank you! Your review has been submitted.');
+      fetchReviews(mediaType, tmdbId).then(list => setReviews(list || []));
+    } catch (err) {
+      setReviewError(err.message || 'Failed to submit review');
+    }
+  };
+
+  const averageRating = reviews.length > 0 
+    ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+    : null;
+
+  const allReviews = [...reviews, ...tmdbReviews].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  const renderStarSelector = () => {
+    return (
+      <div style={{ display: 'flex', gap: '8px', fontSize: '1.75rem', cursor: 'pointer', margin: '8px 0' }}>
+        {[1, 2, 3, 4, 5].map((star) => (
+          <span 
+            key={star} 
+            onClick={() => setUserRating(star)} 
+            style={{ 
+              color: star <= userRating ? 'var(--metaphor-gold, #d4af37)' : 'rgba(255,255,255,0.2)',
+              transition: 'color 0.2s ease, transform 0.1s ease',
+            }}
+          >
+            ★
+          </span>
+        ))}
+      </div>
+    );
+  };
+
+
 
   const [tvSeasons, setTvSeasons] = useState([]);
   const [episodesList, setEpisodesList] = useState([]);
@@ -336,10 +482,6 @@ export default function PlayerPage() {
     return text;
   };
 
-  const getCurrentEntry = useCallback(() => {
-    return getTitleFromEntry({ id: tmdbId, mediaType, title, season, episode });
-  }, [tmdbId, mediaType, title, season, episode]);
-
   useEffect(() => {
     const handleMessage = (e) => {
       let parsed = e.data;
@@ -518,7 +660,10 @@ export default function PlayerPage() {
   useEffect(() => {
     if (mediaType !== 'tv' || !DEFAULT_TMDB_KEY) return;
     fetch(`${TMDB_API_URL}/tv/${tmdbId}?language=en-US&api_key=${DEFAULT_TMDB_KEY}`, { headers: getTmdbHeaders(DEFAULT_TMDB_KEY) })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error("Failed to fetch TV details");
+        return res.json();
+      })
       .then(data => {
         if (data.seasons) setTvSeasons(data.seasons);
         if (data.number_of_seasons) setPlayerMeta(`${data.number_of_seasons} Seasons | ${data.number_of_episodes} Episodes`);
@@ -526,18 +671,51 @@ export default function PlayerPage() {
         if (data.episode_run_time && data.episode_run_time.length > 0) {
           setTvDuration(data.episode_run_time[0] * 60);
         }
+        if (data.vote_average) {
+          setTmdbRating({ average: data.vote_average.toFixed(1), count: data.vote_count });
+        }
+        setShowDetails({
+          overview: data.overview || "No description available.",
+          releaseDate: data.first_air_date,
+          genres: data.genres ? data.genres.map(g => g.name).join(', ') : '',
+          rating: data.vote_average ? data.vote_average.toFixed(1) : null,
+          poster: data.poster_path ? `${TMDB_IMAGE_URL}/w342${data.poster_path}` : null,
+          status: data.status,
+          tagline: data.tagline
+        });
+      })
+      .catch(err => {
+        console.warn("TMDB TV fetch failed:", err);
       });
   }, [tmdbId, mediaType]);
 
   useEffect(() => {
     if (mediaType !== 'movie' || !DEFAULT_TMDB_KEY) return;
     fetch(`${TMDB_API_URL}/movie/${tmdbId}?language=en-US&api_key=${DEFAULT_TMDB_KEY}`, { headers: getTmdbHeaders(DEFAULT_TMDB_KEY) })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error("Failed to fetch Movie details");
+        return res.json();
+      })
       .then(data => {
         if (data.runtime) {
           setMovieDuration(data.runtime * 60);
         }
         if (data.title) setTitle(data.title);
+        if (data.vote_average) {
+          setTmdbRating({ average: data.vote_average.toFixed(1), count: data.vote_count });
+        }
+        setShowDetails({
+          overview: data.overview || "No description available.",
+          releaseDate: data.release_date,
+          genres: data.genres ? data.genres.map(g => g.name).join(', ') : '',
+          rating: data.vote_average ? data.vote_average.toFixed(1) : null,
+          poster: data.poster_path ? `${TMDB_IMAGE_URL}/w342${data.poster_path}` : null,
+          status: data.status,
+          tagline: data.tagline
+        });
+      })
+      .catch(err => {
+        console.warn("TMDB Movie fetch failed:", err);
       });
   }, [tmdbId, mediaType]);
 
@@ -647,51 +825,162 @@ export default function PlayerPage() {
         <Link className="secondary-button" to="/">Home</Link>
         <div><p className="eyebrow">{playerMeta}</p><h1>{title}</h1></div>
         <div className="header-actions">
-          {mediaType === 'tv' && (
-            <button type="button" className="secondary-button" style={{ borderColor: 'var(--gold)', color: 'var(--gold-light)' }} onClick={handleNextEpisode}>
-              ⏭️ Next Episode
-            </button>
-          )}
+          <button className={`secondary-button ${detailsOpen ? 'is-active' : ''}`} onClick={() => setDetailsOpen(o => !o)} title="Toggle Info Panel">📋 Info</button>
           <Link className="secondary-button" to="/profile">Profile</Link>
           <button className={`secondary-button ${lightsOut ? 'is-active' : ''}`} onClick={() => setLightsOut(lo => !lo)} title="Toggle Lights Out mode">💡 Lights {lightsOut ? 'On' : 'Out'}</button>
           <button className={`secondary-button ${isFav ? 'is-active' : ''}`} onClick={() => { toggleFavorite(getCurrentEntry()); setRenderTrigger(x => x+1); }}>{isFav ? 'Saved' : 'Favorite'}</button>
         </div>
       </header>
 
-      {server === 'custom' ? (
-        <div className="player-frame-wrap">
-          <video ref={videoRef} controls autoPlay={autoPlay} className="player-video" src={customVideoUrl} onTimeUpdate={handleVideoTimeUpdate} onLoadedMetadata={handleVideoLoaded}>
-            Your browser does not support the video tag.
-          </video>
-        </div>
-      ) : (
-        <div className="player-frame-wrap">
-          <iframe 
-            src={finalUrl} 
-            title="Player" 
-            frameBorder="0" 
-            allow="autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen" 
-            allowFullScreen={true}
-            webkitallowfullscreen="true"
-            mozallowfullscreen="true"
-            className="player-iframe"
-          ></iframe>
-        </div>
-      )}
+      <div className={`player-container-layout ${!detailsOpen ? 'collapsed' : ''}`}>
+        {/* Left Side: Collapsible Details Card */}
+        <aside className="player-details-aside">
+          {showDetails && (
+            <>
+              {/* Graphic Banner/Poster */}
+              {showDetails.poster && (
+                <div style={{ position: 'relative', width: '100%', aspectRatio: '2 / 3', overflow: 'hidden', borderBottom: '1px solid var(--border-gold)' }}>
+                  <img src={showDetails.poster} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  {showDetails.rating && (
+                    <div style={{ position: 'absolute', top: '12px', right: '12px', background: 'rgba(0,0,0,0.85)', color: 'var(--metaphor-gold)', padding: '4px 10px', fontSize: '0.85rem', fontWeight: 'bold', border: '1px solid var(--border-gold)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      ★ {showDetails.rating}
+                    </div>
+                  )}
+                </div>
+              )}
+              {/* Details Text Body */}
+              <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto', flex: 1 }}>
+                <h2 style={{ fontFamily: 'Cinzel, serif', color: 'var(--parchment)', fontSize: '1.25rem', margin: 0 }}>{title}</h2>
+                {showDetails.tagline && <em style={{ fontSize: '0.85rem', color: 'var(--gold-light)', fontStyle: 'italic' }}>"{showDetails.tagline}"</em>}
+                
+                <hr style={{ border: 'none', borderTop: '1px solid rgba(212,175,55,0.2)', margin: '4px 0' }} />
+                
+                {mediaType === 'tv' && (
+                  <div style={{ fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <span style={{ color: 'var(--parchment-dim)' }}>Current Episode:</span>
+                    <strong style={{ color: 'var(--gold-light)' }}>Season {season}, Episode {episode}</strong>
+                  </div>
+                )}
 
-      {mediaType === 'tv' && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', margin: '-1rem auto 1.5rem', maxWidth: '1920px', padding: '0 8px' }}>
-          <button 
-            type="button" 
-            className="secondary-button" 
-            style={{ borderColor: 'var(--gold)', background: 'rgba(212, 175, 55, 0.05)', color: 'var(--gold-light)' }} 
-            onClick={handleNextEpisode}
-            disabled={getNextEpisodeLabel() === "End of Series"}
-          >
-            ⏭️ {getNextEpisodeLabel()}
-          </button>
+                {showDetails.releaseDate && (
+                  <div style={{ fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <span style={{ color: 'var(--parchment-dim)' }}>{mediaType === 'tv' ? 'First Aired' : 'Released'}:</span>
+                    <strong style={{ color: 'var(--parchment)' }}>
+                      {(() => {
+                        try {
+                          return new Date(showDetails.releaseDate).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+                        } catch {
+                          return showDetails.releaseDate;
+                        }
+                      })()}
+                    </strong>
+                  </div>
+                )}
+
+                {showDetails.genres && (
+                  <div style={{ fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <span style={{ color: 'var(--parchment-dim)' }}>Genres:</span>
+                    <strong style={{ color: 'var(--parchment)' }}>{showDetails.genres}</strong>
+                  </div>
+                )}
+
+                {showDetails.status && (
+                  <div style={{ fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <span style={{ color: 'var(--parchment-dim)' }}>Status:</span>
+                    <strong style={{ color: 'var(--parchment)' }}>{showDetails.status}</strong>
+                  </div>
+                )}
+
+                <div style={{ fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '6px' }}>
+                  <span style={{ color: 'var(--parchment-dim)' }}>Overview:</span>
+                  <p style={{ margin: 0, color: 'var(--parchment)', lineHeight: '1.4', fontSize: '0.85rem', textAlign: 'justify' }}>{showDetails.overview}</p>
+                </div>
+              </div>
+            </>
+          )}
+        </aside>
+
+        {/* Right Side: Player Frame Wrap & Episodes Grid */}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {server === 'custom' ? (
+            <div className="player-frame-wrap" style={{ margin: 0 }}>
+              <video ref={videoRef} controls autoPlay={autoPlay} className="player-video" src={customVideoUrl} onTimeUpdate={handleVideoTimeUpdate} onLoadedMetadata={handleVideoLoaded}>
+                Your browser does not support the video tag.
+              </video>
+            </div>
+          ) : (
+            <div className="player-frame-wrap" style={{ margin: 0 }}>
+              <iframe 
+                src={finalUrl} 
+                title="Player" 
+                frameBorder="0" 
+                allow="autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen" 
+                allowFullScreen={true}
+                webkitallowfullscreen="true"
+                mozallowfullscreen="true"
+                className="player-iframe"
+              ></iframe>
+            </div>
+          )}
+
+          {mediaType === 'tv' && (
+            <div className="episodes-section" style={{ width: '100%' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '1.5rem', borderBottom: '1px solid rgba(212, 175, 55, 0.2)', paddingBottom: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h2 style={{ fontFamily: 'Cinzel, serif', color: 'var(--parchment)', fontSize: '1.75rem', margin: 0 }}>Episodes</h2>
+                  
+                  <button 
+                    type="button" 
+                    className="secondary-button" 
+                    style={{ borderColor: 'var(--gold)', background: 'rgba(212, 175, 55, 0.05)', color: 'var(--gold-light)' }} 
+                    onClick={handleNextEpisode}
+                    disabled={getNextEpisodeLabel() === "End of Series"}
+                  >
+                    ⏭️ {getNextEpisodeLabel()}
+                  </button>
+                </div>
+                
+                {tvSeasons.length > 0 && (
+                  <div className="season-tabs-container" style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px', width: '100%', scrollSnapType: 'x mandatory' }}>
+                    {tvSeasons.filter(s => s.season_number > 0).map(s => (
+                      <button 
+                        key={s.season_number}
+                        type="button"
+                        className={`secondary-button ${Number(season) === s.season_number ? 'is-active' : ''}`}
+                        style={{ flex: '0 0 auto', scrollSnapAlign: 'start', minHeight: '38px', padding: '0 18px', fontSize: '0.85rem' }}
+                        onClick={() => { setSeason(s.season_number); setEpisode(1); setProgress(''); }}
+                      >
+                        Season {s.season_number}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {!DEFAULT_TMDB_KEY ? (
+                <div style={{ padding: '2rem', textAlign: 'center', border: '1px dashed var(--gold)', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.02)' }}>
+                  <strong>Episodes List Unavailable</strong><br/>
+                  To view episode names and thumbnails, please add a valid TMDB API Key to your <code>env.js</code> file.
+                </div>
+              ) : episodesList.length === 0 ? (
+                <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--parchment-dim)' }}>Loading episodes for Season {season}...</div>
+              ) : (
+                <div style={{ display: 'grid', gap: '1.25rem', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
+                  {episodesList.map(ep => (
+                    <button key={ep.episode_number} onClick={() => { setEpisode(ep.episode_number); setProgress(''); window.scrollTo({top: 0, behavior: 'smooth'}); }} className={`episode-button ${Number(episode) === ep.episode_number ? 'is-active' : ''}`} style={{ display: 'flex', gap: '1rem', padding: '0.75rem', textAlign: 'left', cursor: 'pointer', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', transition: 'all 0.2s ease', overflow: 'hidden' }}>
+                      {ep.still_path ? <img src={`${TMDB_IMAGE_URL}/w342${ep.still_path}`} width="120" height="68" style={{objectFit:'cover', borderRadius: '4px'}} /> : <div style={{width: 120, height: 68, borderRadius: '4px', background: '#222'}} className="episode-placeholder"></div>}
+                      <div style={{ overflow: 'hidden', flex: 1 }}>
+                        <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '0.95rem', color: 'var(--parchment)' }}>{ep.episode_number}. {ep.name || 'TBA'}</h4>
+                        <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--parchment-dim)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: '1.3' }}>{ep.overview || "No description."}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       <section className="watch-layout" style={{ display: 'block' }}>
         <aside className="player-sidebar" style={{ maxWidth: '100%' }}>
@@ -1217,57 +1506,124 @@ export default function PlayerPage() {
             </div>
           </form>
 
-          {mediaType === 'tv' && (
-            <div id="episodeListContainer" style={{ width: '100%', marginTop: '2rem' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '1.5rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <h3>Episodes</h3>
-                </div>
-                {tvSeasons.length > 0 && (
-                  <div className="season-tabs-container" style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px', width: '100%', scrollSnapType: 'x mandatory' }}>
-                    {tvSeasons.filter(s => s.season_number > 0).map(s => (
-                      <button 
-                        key={s.season_number}
-                        type="button"
-                        className={`secondary-button ${Number(season) === s.season_number ? 'is-active' : ''}`}
-                        style={{ flex: '0 0 auto', scrollSnapAlign: 'start', minHeight: '38px', padding: '0 18px', fontSize: '0.85rem' }}
-                        onClick={() => { setSeason(s.season_number); setEpisode(1); setProgress(''); }}
-                      >
-                        Season {s.season_number}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {!DEFAULT_TMDB_KEY ? (
-                <div style={{ padding: '1.5rem', textAlign: 'center', border: '1px dashed var(--gold)', borderRadius: '12px' }}>
-                  <strong>Episodes List Unavailable</strong><br/>
-                  To view episode names and thumbnails, please add a valid TMDB API Key to your <code>env.js</code> file.
-                </div>
-              ) : episodesList.length === 0 ? (
-                <div style={{ padding: '1.5rem' }}>Loading episodes for Season {season}...</div>
-              ) : (
-                <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
-                  {episodesList.map(ep => (
-                    <button key={ep.episode_number} onClick={() => { setEpisode(ep.episode_number); setProgress(''); window.scrollTo({top: 0, behavior: 'smooth'}); }} className={`episode-button ${Number(episode) === ep.episode_number ? 'is-active' : ''}`} style={{ display: 'flex', gap: '1rem', padding: '0.75rem', textAlign: 'left', cursor: 'pointer' }}>
-                      {ep.still_path ? <img src={`${TMDB_IMAGE_URL}/w342${ep.still_path}`} width="120" height="68" style={{objectFit:'cover', borderRadius: '8px'}} /> : <div style={{width: 120, height: 68, borderRadius: '8px'}} className="episode-placeholder"></div>}
-                      <div style={{ overflow: 'hidden' }}>
-                        <h4 style={{ margin: '0 0 0.25rem 0' }}>{ep.episode_number}. {ep.name || 'TBA'}</h4>
-                        <p style={{ margin: 0, fontSize: '0.8rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{ep.overview || "No description."}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+          {/* Episodes list moved to full width below the player */}
 
           <section className="events-panel" style={{ marginTop: '2rem' }}>
             <div className="output-header"><h2>Progress Events</h2><button className="secondary-button" type="button" onClick={() => setEvents([])}>Clear</button></div>
             <pre>{events.length > 0 ? events.join('\n\n') : 'Waiting for player events...'}</pre>
           </section>
         </aside>
+      </section>
+
+      {recommendations.length > 0 && (
+        <section className="profile-section" style={{ marginTop: '3rem', borderTop: '1px solid var(--border-gold)', paddingTop: '2rem' }}>
+          <div className="section-header" style={{ marginBottom: '1.5rem' }}>
+            <h2>More Like This</h2>
+          </div>
+          <div className="poster-grid">
+            {recommendations.map((rec) => {
+              const recType = rec.mediaType || 'movie';
+              const saved = isFavorite(rec);
+              const recUrl = `/player?type=${recType}&id=${rec.id}&title=${encodeURIComponent(rec.title)}${recType === 'tv' ? '&season=1&episode=1' : ''}`;
+              return (
+                <article key={rec.id} className="poster-card">
+                  <span className="poster-media">
+                    <Link className="poster-image-link" to={recUrl} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+                      <img src={rec.poster} alt={rec.title} loading="lazy" style={{ width: '100%', aspectRatio: '2 / 3', objectFit: 'cover' }} />
+                    </Link>
+                    <button 
+                      className={`favorite-button ${saved ? 'is-active' : ''}`} 
+                      type="button" 
+                      onClick={() => { toggleFavorite(rec); setRenderTrigger(x => x + 1); }}
+                    >
+                      {saved ? 'Saved' : 'Favorite'}
+                    </button>
+                  </span>
+                  <Link className="poster-link" to={recUrl} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+                    <span className="poster-copy">
+                      <strong style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{rec.title}</strong>
+                      <span>{[recType === 'tv' ? 'TV Show' : 'Movie', rec.year].filter(Boolean).join(' \u00B7 ')}</span>
+                    </span>
+                  </Link>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      <section className="profile-section" style={{ marginTop: '3rem', borderTop: '1px solid var(--border-gold)', paddingTop: '2rem' }}>
+        <div className="section-header" style={{ marginBottom: '1.5rem' }}>
+          <h2>Ratings & Reviews</h2>
+        </div>
+        <div className="reviews-layout">
+          {/* Write a Review Section */}
+          <div style={{ background: 'linear-gradient(135deg, #111622 0%, #080a0f 100%)', border: '1px solid var(--border-gold)', padding: '24px', position: 'relative' }}>
+            <h3 style={{ fontFamily: 'Cinzel, serif', color: 'var(--parchment)', fontSize: '1.2rem', marginBottom: '1.5rem', borderBottom: '1px solid rgba(212,175,55,0.2)', paddingBottom: '8px' }}>
+              Share Your Thoughts
+            </h3>
+            {isLoggedIn() ? (
+              <form onSubmit={handleReviewSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--parchment-dim)' }}>Your Rating</span>
+                  {renderStarSelector()}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--parchment-dim)' }}>Review Comment</span>
+                  <textarea 
+                    rows="4" 
+                    placeholder="What did you think of this title? Writing style, pacing, acting..." 
+                    value={reviewText} 
+                    onChange={e => setReviewText(e.target.value)} 
+                    style={{ width: '100%', padding: '12px', borderRadius: '4px', border: '1px solid var(--border-gold)', background: 'rgba(0,0,0,0.4)', color: '#fff', fontSize: '0.9rem', resize: 'vertical' }}
+                  />
+                </div>
+                
+                {reviewError && <p style={{ color: '#ef4444', fontSize: '0.85rem', margin: 0 }}>⚠️ {reviewError}</p>}
+                {reviewSuccess && <p style={{ color: '#10b981', fontSize: '0.85rem', margin: 0 }}>✓ {reviewSuccess}</p>}
+                
+                <button type="submit" className="primary-link" style={{ minHeight: '40px', width: '100%', cursor: 'pointer' }}>
+                  Submit Review
+                </button>
+              </form>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '2rem 0' }}>
+                <p style={{ color: 'var(--parchment-dim)', marginBottom: '1.5rem' }}>You must be signed in to rate and review.</p>
+                <Link to="/profile" className="secondary-button" style={{ display: 'inline-block', width: 'auto', minWidth: '150px' }}>Sign In Here</Link>
+              </div>
+            )}
+          </div>
+
+          {/* User Reviews List Section */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: 'rgba(255,255,255,0.02)', padding: '16px 20px', border: '1px solid rgba(212,175,55,0.1)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontWeight: 'bold', color: 'var(--gold-light)' }}>User Rating</span>
+                <span style={{ fontFamily: 'Cinzel, serif', fontWeight: 'bold', color: 'var(--parchment)' }}>
+                  {averageRating ? `⭐ ${averageRating} / 5 (${reviews.length} review${reviews.length === 1 ? '' : 's'})` : 'No ratings yet'}
+                </span>
+              </div>
+              {tmdbRating && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '6px' }}>
+                  <span style={{ fontWeight: 'bold', color: '#01b4e4' }}>TMDB Rating</span>
+                  <span style={{ fontFamily: 'Cinzel, serif', fontWeight: 'bold', color: '#fff' }}>
+                    ⭐ {tmdbRating.average} / 10 ({tmdbRating.count.toLocaleString()} votes)
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '420px', overflowY: 'auto', paddingRight: '8px' }}>
+              {allReviews.length === 0 ? (
+                <p className="empty-state" style={{ textAlign: 'center', padding: '3rem 0' }}>No reviews yet. Be the first to share your thoughts!</p>
+              ) : (
+                allReviews.map((rev, idx) => {
+                  return <ReviewItemComponent key={idx} rev={rev} />;
+                })
+              )}
+            </div>
+          </div>
+        </div>
       </section>
     </main>
   );

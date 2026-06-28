@@ -211,6 +211,235 @@
       },
       "watchTime": 140,
       "createdAt": "2026-06-17T04:14:15.750Z"
+    },
+    "uilu": {
+      "username": "uilu",
+      "passwordHash": "$2b$10$xcXktTedoe0WRoOD5aoTkuLQEctMik1xXBzoR.OGTUuXQ.uNHWE5C",
+      "favorites": [
+        {
+          "id": "1339713",
+          "mediaType": "movie",
+          "title": "Obsession",
+          "year": "2026",
+          "poster": "https://image.tmdb.org/t/p/w342/bRwnj8WEKBCvmfeUNOukJPwB43K.jpg",
+          "backdrop": "https://image.tmdb.org/t/p/w1280/5lTZyuBTNOfawsfPT8Q0cIg6qAF.jpg",
+          "season": 1,
+          "episode": 1,
+          "totalSeasons": 0,
+          "totalEpisodes": 0,
+          "genreIds": [
+            27,
+            53
+          ],
+          "savedAt": 1782624644965
+        },
+        {
+          "id": "1239134",
+          "mediaType": "movie",
+          "title": "Bhooth Bangla",
+          "year": "2026",
+          "poster": "https://image.tmdb.org/t/p/w342/ArIS4vwUxdhm3j7tsTHmffdfU8W.jpg",
+          "backdrop": "https://image.tmdb.org/t/p/w1280/A2tzVTVtnTvpji96IZmleN78KKv.jpg",
+          "season": 1,
+          "episode": 1,
+          "totalSeasons": 0,
+          "totalEpisodes": 0,
+          "genreIds": [
+            27,
+            35
+          ],
+          "savedAt": 1782624648216
+        }
+      ],
+      "history": [
+        {
+          "id": "1339713",
+          "mediaType": "movie",
+          "title": "Obsession",
+          "year": "2026",
+          "poster": "https://image.tmdb.org/t/p/w342/bRwnj8WEKBCvmfeUNOukJPwB43K.jpg",
+          "backdrop": "https://image.tmdb.org/t/p/w1280/5lTZyuBTNOfawsfPT8Q0cIg6qAF.jpg",
+          "season": 1,
+          "episode": 1,
+          "totalSeasons": 0,
+          "totalEpisodes": 0,
+          "genreIds": [
+            27,
+            53
+          ],
+          "watchedAt": 1782624749127
+        },
+        {
+          "id": "28322",
+          "mediaType": "movie",
+          "title": "Madness",
+          "year": "1980",
+          "poster": "https://image.tmdb.org/t/p/w342/gV0J0Fqw2mYMtQbzb0ruxv9MAeZ.jpg",
+          "backdrop": "https://image.tmdb.org/t/p/w1280/7TJjD2X9GTEqyLVIJKLS85J2V47.jpg",
+          "season": 1,
+          "episode": 1,
+          "totalSeasons": 0,
+          "totalEpisodes": 0,
+          "genreIds": [
+            53,
+            28,
+            80
+          ],
+          "watchedAt": 1782624728233
+        },
+        {
+          "id": "1399",
+          "mediaType": "tv",
+          "title": "Game of Thrones",
+          "year": "2011",
+          "poster": "https://image.tmdb.org/t/p/w342/1XS1oqL89opfnbLl8WnZY1O1uJx.jpg",
+          "backdrop": "https://image.tmdb.org/t/p/w1280/2OMB0ynKlyIenMJWI2Dy9IWT4c.jpg",
+          "season": 1,
+          "episode": 1,
+          "totalSeasons": 0,
+          "totalEpisodes": 0,
+          "genreIds": [
+            10765,
+            18,
+            10759
+          ],
+          "watchedAt": 1782624010770
+        },
+        {
+          "id": "76479",
+          "mediaType": "tv",
+          "title": "The Boys",
+          "year": "2019",
+          "poster": "https://image.tmdb.org/t/p/w342/in1R2dDc421JxsoRWaIIAqVI2KE.jpg",
+          "backdrop": "https://image.tmdb.org/t/p/w1280/n6vVs6z8obNbExdD3QHTr4Utu1Z.jpg",
+          "season": 1,
+          "episode": 1,
+          "totalSeasons": 0,
+          "totalEpisodes": 0,
+          "genreIds": [
+            10765,
+            10759
+          ],
+          "watchedAt": 1782623229224
+        },
+        {
+          "id": "261343",
+          "mediaType": "tv",
+          "title": "Chitose Is in the Ramune Bottle",
+          "year": "",
+          "poster": "",
+          "backdrop": "",
+          "season": 1,
+          "episode": 1,
+          "totalSeasons": 0,
+          "totalEpisodes": 0,
+          "genreIds": [],
+          "watchedAt": 1782620631781
+        }
+      ],
+      "progress": {
+        "tv:261343:s1:e1": {
+          "id": "261343",
+          "mediaType": "tv",
+          "title": "Chitose Is in the Ramune Bottle",
+          "year": "",
+          "poster": "",
+          "backdrop": "",
+          "season": 1,
+          "episode": 1,
+          "totalSeasons": 0,
+          "totalEpisodes": 0,
+          "genreIds": [],
+          "currentTime": 575,
+          "duration": 2700,
+          "progress": 21.296296296296298,
+          "updatedAt": 1782620631781
+        },
+        "movie:1339713": {
+          "id": "1339713",
+          "mediaType": "movie",
+          "title": "Obsession",
+          "year": "2026",
+          "poster": "https://image.tmdb.org/t/p/w342/bRwnj8WEKBCvmfeUNOukJPwB43K.jpg",
+          "backdrop": "https://image.tmdb.org/t/p/w1280/5lTZyuBTNOfawsfPT8Q0cIg6qAF.jpg",
+          "season": 1,
+          "episode": 1,
+          "totalSeasons": 0,
+          "totalEpisodes": 0,
+          "genreIds": [
+            27,
+            53
+          ],
+          "currentTime": 340,
+          "duration": 6480,
+          "progress": 5.246913580246913,
+          "updatedAt": 1782624749127
+        },
+        "tv:1399:s1:e1": {
+          "id": "1399",
+          "mediaType": "tv",
+          "title": "Game of Thrones",
+          "year": "2011",
+          "poster": "https://image.tmdb.org/t/p/w342/1XS1oqL89opfnbLl8WnZY1O1uJx.jpg",
+          "backdrop": "https://image.tmdb.org/t/p/w1280/2OMB0ynKlyIenMJWI2Dy9IWT4c.jpg",
+          "season": 1,
+          "episode": 1,
+          "totalSeasons": 0,
+          "totalEpisodes": 0,
+          "genreIds": [
+            10765,
+            18,
+            10759
+          ],
+          "currentTime": 385,
+          "duration": 2700,
+          "progress": 14.25925925925926,
+          "updatedAt": 1782624010770
+        },
+        "tv:76479:s1:e1": {
+          "id": "76479",
+          "mediaType": "tv",
+          "title": "The Boys",
+          "year": "2019",
+          "poster": "https://image.tmdb.org/t/p/w342/in1R2dDc421JxsoRWaIIAqVI2KE.jpg",
+          "backdrop": "https://image.tmdb.org/t/p/w1280/n6vVs6z8obNbExdD3QHTr4Utu1Z.jpg",
+          "season": 1,
+          "episode": 1,
+          "totalSeasons": 0,
+          "totalEpisodes": 0,
+          "genreIds": [
+            10765,
+            10759
+          ],
+          "currentTime": 300,
+          "duration": 2700,
+          "progress": 11.11111111111111,
+          "updatedAt": 1782623229224
+        },
+        "movie:28322": {
+          "id": "28322",
+          "mediaType": "movie",
+          "title": "Madness",
+          "year": "1980",
+          "poster": "https://image.tmdb.org/t/p/w342/gV0J0Fqw2mYMtQbzb0ruxv9MAeZ.jpg",
+          "backdrop": "https://image.tmdb.org/t/p/w1280/7TJjD2X9GTEqyLVIJKLS85J2V47.jpg",
+          "season": 1,
+          "episode": 1,
+          "totalSeasons": 0,
+          "totalEpisodes": 0,
+          "genreIds": [
+            53,
+            28,
+            80
+          ],
+          "currentTime": 10,
+          "duration": 5340,
+          "progress": 0.18726591760299627,
+          "updatedAt": 1782624728233
+        }
+      },
+      "watchTime": 1610,
+      "createdAt": "2026-06-28T04:20:10.736Z"
     }
   }
 }

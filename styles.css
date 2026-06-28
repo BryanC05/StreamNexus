@@ -371,10 +371,10 @@ button:active,
 .lights-out-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.88);
+  background: rgba(0, 0, 0, 0.94);
   z-index: 9000;
   cursor: pointer;
-  animation: lights-fade-in 0.4s ease;
+  animation: lights-fade-in 0.3s ease;
 }
 
 @keyframes lights-fade-in {
@@ -382,15 +382,29 @@ button:active,
   to { opacity: 1; }
 }
 
+.player-shell.lights-out {
+  animation: none !important;
+  transform: none !important;
+}
+
+.lights-out .player-container-layout {
+  overflow: visible !important;
+  transition: none !important;
+  transform: none !important;
+}
+
 .lights-out .player-frame-wrap {
   position: fixed;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%) !important;
   z-index: 9001;
-  width: min(90vw, calc(90vh * 16 / 9));
+  width: min(85vw, calc(83vh * 16 / 9));
   aspect-ratio: 16 / 9;
   margin: 0;
+  box-shadow: 0 10px 50px rgba(0, 0, 0, 0.9);
+  border: 1px solid var(--border-gold);
+  border-radius: 8px;
 }
 
 .player-sidebar {
@@ -667,5 +681,101 @@ a:focus-visible {
 /* ── Prevent CSS Transitions from Breaking Video Controls ── */
 video, video * {
   transition: none !important;
+}
+
+/* ── Favorites 5-Column Grid ── */
+.favorites-grid-5 {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+
+@media (max-width: 1024px) {
+  .favorites-grid-5 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .favorites-grid-5 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ── Ratings & Reviews Layout ── */
+.reviews-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.8fr);
+  gap: 2rem;
+}
+
+@media (max-width: 768px) {
+  .reviews-layout {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+}
+
+/* ── Collapsible Player Details Layout ── */
+.player-container-layout {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 20px;
+  max-width: 1920px;
+  margin: 0 auto 2rem;
+  overflow: hidden;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.player-container-layout.collapsed {
+  grid-template-columns: 0px minmax(0, 1fr);
+  gap: 0px;
+}
+
+.player-details-aside {
+  width: 320px;
+  background: linear-gradient(180deg, #111622 0%, #06080c 100%) !important;
+  border: 1px solid var(--border-gold) !important;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.player-container-layout.collapsed .player-details-aside {
+  border-width: 0px !important;
+  width: 0px !important;
+  height: 0px !important;
+  min-height: 0px !important;
+}
+
+@media (max-width: 900px) {
+  .player-container-layout {
+    grid-template-columns: 1fr !important;
+    gap: 1.5rem;
+  }
+  .player-container-layout.collapsed {
+    grid-template-columns: 1fr !important;
+    gap: 0px;
+  }
+  .player-details-aside {
+    width: 100% !important;
+    max-height: 1200px;
+    transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), border-width 0.35s ease, padding 0.35s ease;
+  }
+  .player-container-layout.collapsed .player-details-aside {
+    max-height: 0px !important;
+    border-width: 0px !important;
+    padding: 0px !important;
+    margin: 0px !important;
+  }
+}
+
+/* ── Prevent Image Dragging globally ── */
+img {
+  user-select: none;
+  -webkit-user-drag: none;
 }
 

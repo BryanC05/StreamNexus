@@ -487,7 +487,16 @@ function getFavorites() {
 }
 
 function getHistory() {
-  return readStore(HISTORY_KEY, []);
+  const history = readStore(HISTORY_KEY, []);
+  const seen = new Set();
+  return history.filter((item) => {
+    const uniqueKey = item.mediaType === "tv" ? `tv:${item.id}` : `movie:${item.id}`;
+    if (seen.has(uniqueKey)) {
+      return false;
+    }
+    seen.add(uniqueKey);
+    return true;
+  });
 }
 
 function getProgressStore() {
@@ -542,7 +551,12 @@ function saveHistory(entry) {
   const key = getContentKey(normalized);
   const next = [
     { ...normalized, watchedAt: Date.now() },
-    ...getHistory().filter((item) => getContentKey(item) !== key),
+    ...getHistory().filter((item) => {
+      if (normalized.mediaType === "tv" && item.mediaType === "tv") {
+        return String(item.id) !== String(normalized.id);
+      }
+      return getContentKey(item) !== key;
+    }),
   ].slice(0, 80);
 
   writeStore(HISTORY_KEY, next);
@@ -649,17 +663,39 @@ function getImageUrl(path, size, fallbackPath = "") {
 }
 
 function normalizeMovie(item) {
+  const genreIds = [...(item.genre_ids || [])];
+  if (genreIds.includes(16) && item.original_language === "ja") {
+    if (!genreIds.includes(99999)) {
+      genreIds.push(99999);
+    }
+  }
+  if (item.original_language === "ko") {
+    if (!genreIds.includes(88888)) {
+      genreIds.push(88888);
+    }
+  }
   return {
     id: String(item.id),
     title: item.title || item.original_title || "Untitled Movie",
     year: getYear(item.release_date),
     poster: getImageUrl(item.poster_path, "w342"),
     backdrop: getImageUrl(item.backdrop_path, "w1280"),
-    genreIds: item.genre_ids || [],
+    genreIds,
   };
 }
 
 function normalizeTv(item) {
+  const genreIds = [...(item.genre_ids || [])];
+  if (genreIds.includes(16) && (item.original_language === "ja" || item.origin_country?.includes("JP"))) {
+    if (!genreIds.includes(99999)) {
+      genreIds.push(99999);
+    }
+  }
+  if (item.original_language === "ko" || item.origin_country?.includes("KR")) {
+    if (!genreIds.includes(88888)) {
+      genreIds.push(88888);
+    }
+  }
   return {
     id: String(item.id),
     title: item.name || item.original_name || "Untitled TV Show",
@@ -670,7 +706,7 @@ function normalizeTv(item) {
     totalEpisodes: Number(item.number_of_episodes || 0),
     poster: getImageUrl(item.poster_path, "w342"),
     backdrop: getImageUrl(item.backdrop_path, "w1280"),
-    genreIds: item.genre_ids || [],
+    genreIds,
   };
 }
 
@@ -787,6 +823,62 @@ async function fetchPopularCatalog(credential) {
     tv,
     loadedAt: new Date().toISOString(),
   };
+}
+
+async function fetchRecommendations(mediaType, tmdbId, credential) {
+  let list = [];
+  if (tmdbId && credential) {
+    try {
+      const path = `/${mediaType}/${tmdbId}/recommendations`;
+      const response = await fetchTmdbPage(path, 1, credential);
+      let results = response.results || [];
+      
+      // If we have less than 21 results, try to fetch page 2 to fill up the grid
+      if (results.length < 25) {
+        try {
+          const response2 = await fetchTmdbPage(path, 2, credential);
+          results = [...results, ...(response2.results || [])];
+        } catch (e2) {
+          // ignore page 2 errors
+        }
+      }
+      
+      list = results
+        .filter((item) => item.poster_path)
+        .map(mediaType === "tv" ? normalizeTv : normalizeMovie);
+    } catch (err) {
+      console.warn("Failed to fetch TMDB recommendations:", err);
+    }
+  }
+
+  // Fallback: If list is empty, get similar from active catalog by genre matching or just popular
+  if (!list.length) {
+    const catalogData = getActiveCatalog();
+    const items = catalogData[mediaType] || [];
+    const currentItem = items.find(x => String(x.id) === String(tmdbId));
+    if (currentItem && currentItem.genreIds && currentItem.genreIds.length > 0) {
+      // Sort items by how many matching genres they share
+      list = items
+        .filter(x => String(x.id) !== String(tmdbId))
+        .map(item => {
+          const matchCount = (item.genreIds || []).filter(g => currentItem.genreIds.includes(g)).length;
+          return { item, matchCount };
+        })
+        .filter(x => x.matchCount > 0)
+        .sort((a, b) => b.matchCount - a.matchCount)
+        .map(x => x.item);
+    }
+    
+    // If still empty or too short, fill up with other popular items from the same mediaType
+    if (list.length < 21) {
+      const currentIds = new Set(list.map(x => String(x.id)));
+      currentIds.add(String(tmdbId));
+      const popularItems = items.filter(x => !currentIds.has(String(x.id)));
+      list = [...list, ...popularItems];
+    }
+  }
+
+  return list.slice(0, 21); // Return top 21 recommendations
 }
 
 async function autoFetchSubtitles(tmdbId, mediaType, season, episode) {
@@ -2050,6 +2142,15 @@ function logout() {
   localStorage.removeItem(WATCH_TIME_KEY);
 }
 
+async function safeParseJson(response, fallback = {}) {
+  try {
+    const text = await response.text();
+    return text ? JSON.parse(text) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 async function apiRegister(username, password) {
   const response = await fetch('/api/auth/register', {
     method: 'POST',
@@ -2057,10 +2158,13 @@ async function apiRegister(username, password) {
     body: JSON.stringify({ username, password })
   });
   if (!response.ok) {
-    const err = await response.json();
+    const err = await safeParseJson(response, { error: 'Registration failed' });
     throw new Error(err.error || 'Registration failed');
   }
-  const data = await response.json();
+  const data = await safeParseJson(response);
+  if (!data || !data.token) {
+    throw new Error('Registration failed: invalid response');
+  }
   writeStore(TOKEN_KEY, data.token);
   writeStore(USERNAME_KEY, data.username);
   await apiSyncPush();
@@ -2074,10 +2178,13 @@ async function apiLogin(username, password) {
     body: JSON.stringify({ username, password })
   });
   if (!response.ok) {
-    const err = await response.json();
+    const err = await safeParseJson(response, { error: 'Login failed' });
     throw new Error(err.error || 'Login failed');
   }
-  const data = await response.json();
+  const data = await safeParseJson(response);
+  if (!data || !data.token) {
+    throw new Error('Login failed: invalid response');
+  }
   writeStore(TOKEN_KEY, data.token);
   writeStore(USERNAME_KEY, data.username);
   await apiSyncPull();
@@ -2091,7 +2198,8 @@ async function apiSyncPull() {
       headers: { 'Authorization': `Bearer ${getToken()}` }
     });
     if (!response.ok) return;
-    const data = await response.json();
+    const data = await safeParseJson(response);
+    if (!data) return;
     
     if (data.favorites) writeStore(FAVORITES_KEY, data.favorites);
     if (data.history) writeStore(HISTORY_KEY, data.history);
@@ -2119,7 +2227,8 @@ async function apiSyncPush() {
       body: JSON.stringify({ favorites, history, progress, watchTime })
     });
     if (!response.ok) return;
-    const data = await response.json();
+    const data = await safeParseJson(response);
+    if (!data) return;
     
     if (data.favorites) writeStore(FAVORITES_KEY, data.favorites);
     if (data.history) writeStore(HISTORY_KEY, data.history);
@@ -2140,6 +2249,59 @@ async function apiClearCloud() {
   } catch (err) {
     console.warn('Clear cloud failed:', err);
   }
+}
+
+async function fetchReviews(mediaType, tmdbId) {
+  try {
+    const response = await fetch(`/api/reviews?mediaType=${mediaType}&tmdbId=${tmdbId}`);
+    if (!response.ok) return [];
+    return await safeParseJson(response, []);
+  } catch (err) {
+    console.warn("Failed to fetch reviews:", err);
+    return [];
+  }
+}
+
+async function fetchTmdbReviews(mediaType, tmdbId, credential) {
+  if (!tmdbId || !credential) return [];
+  try {
+    const url = new URL(`${TMDB_API_URL}/${mediaType}/${tmdbId}/reviews`);
+    url.searchParams.set("language", "en-US");
+    url.searchParams.set("page", "1");
+    if (!credential.startsWith("ey")) {
+      url.searchParams.set("api_key", credential);
+    }
+    const response = await fetch(url, { headers: getTmdbHeaders(credential) });
+    if (!response.ok) return [];
+    const data = await response.json();
+    return (data.results || []).map(r => ({
+      username: r.author || 'TMDB User',
+      rating: r.author_details?.rating ? Math.round(r.author_details.rating / 2) : null,
+      text: r.content || '',
+      createdAt: r.created_at || new Date().toISOString(),
+      isTmdb: true
+    }));
+  } catch (err) {
+    console.warn("Failed to fetch TMDB reviews:", err);
+    return [];
+  }
+}
+
+async function submitReview(mediaType, tmdbId, rating, text) {
+  if (!isLoggedIn()) throw new Error("You must be logged in to submit a review.");
+  const response = await fetch('/api/reviews', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${getToken()}`
+    },
+    body: JSON.stringify({ mediaType, tmdbId, rating, text })
+  });
+  if (!response.ok) {
+    const err = await safeParseJson(response, { error: 'Failed to submit review' });
+    throw new Error(err.error || 'Failed to submit review');
+  }
+  return await safeParseJson(response);
 }
 
 let syncTimeout = null;
@@ -2164,7 +2326,8 @@ export {
   formatTvTotals, getYear, getImageUrl, normalizeMovie, normalizeTv,
   fetchTvStats, getTmdbHeaders, getTmdbUrl, fetchTmdbPage,
   fetchTmdbPages, fetchPopularCatalog, searchTmdb, autoFetchSubtitles,
-  uploadSubtitleToTempHost,
+  uploadSubtitleToTempHost, fetchRecommendations,
+  fetchReviews, fetchTmdbReviews, submitReview,
   
   getToken, getUsername, isLoggedIn, logout, apiRegister, apiLogin,
   apiSyncPull, apiSyncPush, apiClearCloud

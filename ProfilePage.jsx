@@ -36,6 +36,7 @@ export default function ProfilePage() {
   const navigate = useNavigate();
   const [trigger, setTrigger] = useState(0);
   const forceRender = () => setTrigger(x => x + 1);
+  const [activeTab, setActiveTab] = useState('favorites'); // 'favorites' or 'history'
 
   const [authMode, setAuthMode] = useState('login'); // 'login' or 'register'
   const [usernameInput, setUsernameInput] = useState('');
@@ -162,12 +163,84 @@ export default function ProfilePage() {
         </div>
       </header>
       <section className="stats-grid">
-        <article className="stat-tile"><span>{favorites.length}</span><p>Favorites</p></article>
-        <article className="stat-tile"><span>{history.length}</span><p>History</p></article>
+        <article className={`stat-tile ${activeTab === 'favorites' ? 'is-active' : ''}`} style={{ cursor: 'pointer' }} onClick={() => setActiveTab('favorites')}>
+          <span>{favorites.length}</span>
+          <p>Favorites</p>
+        </article>
+        <article className={`stat-tile ${activeTab === 'history' ? 'is-active' : ''}`} style={{ cursor: 'pointer' }} onClick={() => setActiveTab('history')}>
+          <span>{history.length}</span>
+          <p>History</p>
+        </article>
         <article className="stat-tile"><span>{formatDuration(getGlobalWatchTime())}</span><p>Watch Time</p></article>
       </section>
-      <section className="profile-section"><div className="section-header"><h2>Continue Watching</h2></div><ProfileList items={continueItems} emptyText="No active titles." /></section>
-      <section className="profile-section"><div className="section-header"><h2>Favorites</h2></div><ProfileList items={favorites} emptyText="No favorites." allowRemove forceRender={forceRender} /></section>
+
+      {continueItems.length > 0 && (
+        <section className="profile-section">
+          <div className="section-header">
+            <h2>Continue Watching</h2>
+          </div>
+          <ProfileList items={continueItems} emptyText="No active titles." />
+        </section>
+      )}
+
+      <div className="profile-tabs" style={{ display: 'flex', gap: '12px', marginTop: '2rem', borderBottom: '1px solid var(--border-gold)', paddingBottom: '12px', marginBottom: '1.5rem' }}>
+        <button 
+          className={`secondary-button ${activeTab === 'favorites' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('favorites')}
+          style={{ flex: 1, minWidth: '0' }}
+        >
+          Favorites ({favorites.length})
+        </button>
+        <button 
+          className={`secondary-button ${activeTab === 'history' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('history')}
+          style={{ flex: 1, minWidth: '0' }}
+        >
+          Watch History ({history.length})
+        </button>
+      </div>
+
+      {activeTab === 'favorites' ? (
+        <section className="profile-section" style={{ marginTop: '0' }}>
+          {favorites.length === 0 ? (
+            <p className="empty-state">No favorites.</p>
+          ) : (
+            <div className="favorites-grid-5">
+              {favorites.map((item, idx) => {
+                const n = getTitleFromEntry({ ...item, mediaType: item.mediaType || "movie" });
+                const url = `/player?type=${n.mediaType}&id=${n.id}&title=${encodeURIComponent(n.title)}&season=${n.season}&episode=${n.episode}`;
+                return (
+                  <article key={idx} className="poster-card">
+                    <span className="poster-media">
+                      <Link className="poster-image-link" to={url}>
+                        <img src={n.poster} alt={n.title} loading="lazy" style={{ width: '100%', aspectRatio: '2 / 3', objectFit: 'cover' }} />
+                      </Link>
+                      <button 
+                        className="favorite-button is-active" 
+                        type="button" 
+                        onClick={() => { toggleFavorite(n); forceRender(); }}
+                        title="Remove Favorite"
+                      >
+                        Remove
+                      </button>
+                    </span>
+                    <Link className="poster-link" to={url}>
+                      <span className="poster-copy">
+                        <strong style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.title}</strong>
+                        <span style={{ fontSize: '0.75rem' }}>{[n.mediaType === "tv" ? `TV Show` : "Movie", n.year].filter(Boolean).join(" \u00B7 ")}</span>
+                      </span>
+                    </Link>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      ) : (
+        <section className="profile-section" style={{ marginTop: '0' }}>
+          <ProfileList items={history} emptyText="No watch history." forceRender={forceRender} />
+        </section>
+      )}
     </main>
   );
 }

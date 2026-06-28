@@ -230,6 +230,59 @@ app.post('/api/user/clear', authenticateToken, (req, res) => {
   res.json({ success: true });
 });
 
+// --- RATING & REVIEWS ---
+
+// Get reviews for a title
+app.get('/api/reviews', (req, res) => {
+  const { mediaType, tmdbId } = req.query;
+  if (!mediaType || !tmdbId) {
+    return res.status(400).json({ error: 'mediaType and tmdbId are required' });
+  }
+
+  const db = getDb();
+  if (!db.reviews) db.reviews = {};
+
+  const key = `${mediaType}:${tmdbId}`;
+  res.json(db.reviews[key] || []);
+});
+
+// Add a review
+app.post('/api/reviews', authenticateToken, (req, res) => {
+  const { mediaType, tmdbId, rating, text } = req.body;
+  if (!mediaType || !tmdbId || rating === undefined) {
+    return res.status(400).json({ error: 'mediaType, tmdbId, and rating are required' });
+  }
+
+  const numericRating = Number(rating);
+  if (isNaN(numericRating) || numericRating < 1 || numericRating > 5) {
+    return res.status(400).json({ error: 'Rating must be a number between 1 and 5' });
+  }
+
+  const db = getDb();
+  if (!db.reviews) db.reviews = {};
+
+  const key = `${mediaType}:${tmdbId}`;
+  if (!db.reviews[key]) db.reviews[key] = [];
+
+  const existingIdx = db.reviews[key].findIndex(r => r.username.toLowerCase() === req.username.toLowerCase());
+  
+  const newReview = {
+    username: db.users[req.username]?.username || req.username,
+    rating: numericRating,
+    text: (text || '').trim(),
+    createdAt: new Date().toISOString()
+  };
+
+  if (existingIdx !== -1) {
+    db.reviews[key][existingIdx] = newReview;
+  } else {
+    db.reviews[key].push(newReview);
+  }
+
+  saveDb(db);
+  res.json({ success: true, reviews: db.reviews[key] });
+});
+
 if (process.env.VERCEL !== '1') {
   app.listen(PORT, () => {
     console.log(`StreamNexus Auth & Sync Server running on port ${PORT}`);
