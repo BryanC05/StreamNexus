@@ -457,6 +457,46 @@ function writeStore(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
+function showVanillaToast(message, type = 'info', duration = 5000) {
+  if (typeof document === 'undefined') return;
+  let container = document.querySelector('.toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.className = 'toast-container';
+    document.body.appendChild(container);
+  }
+  const toast = document.createElement('div');
+  toast.className = `toast-item toast-${type}`;
+  toast.style.setProperty('--duration', `${duration}ms`);
+  
+  let icon = 'ℹ️';
+  if (type === 'success') icon = '✓';
+  else if (type === 'error' || type === 'warning') icon = '⚠️';
+  
+  toast.innerHTML = `
+    <span class="toast-icon">${icon}</span>
+    <p class="toast-message">${message}</p>
+    <button type="button" class="toast-close">&times;</button>
+  `;
+  container.appendChild(toast);
+  
+  const closeBtn = toast.querySelector('.toast-close');
+  const dismiss = () => {
+    toast.style.animation = 'toast-slide-out 0.3s ease forwards';
+    setTimeout(() => {
+      toast.remove();
+    }, 300);
+  };
+  
+  closeBtn.addEventListener('click', dismiss);
+  
+  let dismissTimer = setTimeout(dismiss, duration);
+  toast.addEventListener('mouseenter', () => clearTimeout(dismissTimer));
+  toast.addEventListener('mouseleave', () => {
+    dismissTimer = setTimeout(dismiss, 3000);
+  });
+}
+
 function getContentKey(entry) {
   if (entry.mediaType === "tv") {
     return `tv:${entry.id}:s${entry.season || 1}:e${entry.episode || 1}`;
@@ -1113,42 +1153,56 @@ async function uploadSubtitleToTempHost(text, filename) {
   const file = new File([text], filename, { type: "text/vtt" });
 
   // Primary: Litterbox via CORS Proxy (keeps file for 12 hours)
-  try {
-    const formData = new FormData();
-    formData.append("reqtype", "fileupload");
-    formData.append("time", "12h");
-    formData.append("fileToUpload", file);
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const formData = new FormData();
+      formData.append("reqtype", "fileupload");
+      formData.append("time", "12h");
+      formData.append("fileToUpload", file);
 
-    const res = await fetch(`https://corsproxy.io/?${encodeURIComponent("https://litterbox.catbox.moe/user/api.php")}`, {
-      method: "POST",
-      body: formData
-    });
-    if (res.ok) {
-      const url = await res.text();
-      if (url.startsWith("http")) return url.trim();
+      const res = await fetch(`https://corsproxy.io/?${encodeURIComponent("https://litterbox.catbox.moe/user/api.php")}`, {
+        method: "POST",
+        body: formData
+      });
+      if (res.ok) {
+        const url = await res.text();
+        if (url.startsWith("http")) {
+          return url.trim();
+        }
+      }
+    } catch (e) {
+      console.error(`Litterbox upload attempt ${attempt} failed:`, e);
     }
-  } catch (e) {
-    console.error("Litterbox upload via proxy failed:", e);
+    
+    if (attempt < 3) {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+    }
   }
 
   // Secondary: tmpfiles.org directly (has native CORS, keeps file for 60 minutes)
-  try {
-    const formData = new FormData();
-    formData.append("file", file);
-    
-    const res = await fetch("https://tmpfiles.org/api/v1/upload", {
-      method: "POST",
-      body: formData
-    });
-    if (res.ok) {
-      const json = await res.json();
-      if (json?.data?.url) {
-        // tmpfiles returns a viewer link. We must inject /dl/ to get the raw file download link.
-        return json.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      
+      const res = await fetch("https://tmpfiles.org/api/v1/upload", {
+        method: "POST",
+        body: formData
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json?.data?.url) {
+          // tmpfiles returns a viewer link. We must inject /dl/ to get the raw file download link.
+          return json.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
+        }
       }
+    } catch (e) {
+      console.error(`tmpfiles upload attempt ${attempt} failed:`, e);
     }
-  } catch (e) {
-    console.error("tmpfiles upload failed:", e);
+    
+    if (attempt < 2) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
   }
 
   throw new Error("All temporary hosting services failed or were blocked by CORS.");
@@ -1349,7 +1403,7 @@ function buildEmbedUrl() {
   const mediaType = getMediaType();
   const tmdbIdInput = document.querySelector("#tmdbId");
   const serverInput = document.querySelector("#serverProvider");
-  const baseUrl = serverInput ? serverInput.value : "https://vidsrc.me/embed";
+  const baseUrl = serverInput ? serverInput.value : "https://vidsync.live/embed";
   const seasonInput = document.querySelector("#season");
   const episodeInput = document.querySelector("#episode");
   const colorInput = document.querySelector("#color");
@@ -1865,8 +1919,8 @@ function initPlayerPage() {
   setMediaType(mediaType);
 
   if (serverProviderInput) {
-    let savedServer = readStore(SERVER_KEY, "https://vidsrc.me/embed");
-    if (savedServer.includes("vidsrc.net") || savedServer.includes("vidsrc.to") || savedServer.includes("embed.su")) savedServer = "https://vidsrc.me/embed";
+    let savedServer = readStore(SERVER_KEY, "https://vidsync.live/embed");
+    if (savedServer.includes("vidsrc.net") || savedServer.includes("vidsrc.to") || savedServer.includes("embed.su")) savedServer = "https://vidsync.live/embed";
     serverProviderInput.value = savedServer;
     serverProviderInput.addEventListener("change", () => {
       writeStore(SERVER_KEY, serverProviderInput.value);
@@ -1960,9 +2014,9 @@ function initPlayerPage() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      if (!silent) alert("Subtitle downloaded successfully! \n\nIf your current player supports it (like Vidking or VidSrc.pm), click the 'CC' button to upload.");
+      if (!silent) showVanillaToast("Subtitle downloaded successfully!\n\nIf your current player supports it (like Vidking or VidSrc.pm), click the 'CC' button to upload.", "success", 7000);
     } catch (err) {
-      if (!silent) alert(`Error: ${err.message}`);
+      if (!silent) showVanillaToast(`Error: ${err.message}`, "error");
     } finally {
       autoFetchBtn.textContent = "Auto-Fetch Subtitles";
       autoFetchBtn.disabled = false;

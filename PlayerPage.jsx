@@ -50,6 +50,65 @@ function ReviewItemComponent({ rev }) {
   );
 }
 
+function ToastItem({ toast, onDismiss }) {
+  const [isExiting, setIsExiting] = useState(false);
+  const timerRef = useRef(null);
+  const remainingTimeRef = useRef(toast.duration);
+  const startTimeRef = useRef(Date.now());
+
+  const handleDismiss = useCallback(() => {
+    setIsExiting(true);
+    setTimeout(() => {
+      onDismiss(toast.id);
+    }, 300);
+  }, [toast.id, onDismiss]);
+
+  const startTimer = useCallback(() => {
+    startTimeRef.current = Date.now();
+    timerRef.current = setTimeout(handleDismiss, remainingTimeRef.current);
+  }, [handleDismiss]);
+
+  const pauseTimer = useCallback(() => {
+    clearTimeout(timerRef.current);
+    remainingTimeRef.current -= (Date.now() - startTimeRef.current);
+    if (remainingTimeRef.current < 1000) {
+      remainingTimeRef.current = 1000;
+    }
+  }, []);
+
+  useEffect(() => {
+    startTimer();
+    return () => clearTimeout(timerRef.current);
+  }, [startTimer]);
+
+  const getIcon = () => {
+    switch (toast.type) {
+      case 'success': return '✓';
+      case 'error': return '⚠️';
+      case 'warning': return '⚠️';
+      case 'info':
+      default:
+        return 'ℹ️';
+    }
+  };
+
+  return (
+    <div 
+      className={`toast-item toast-${toast.type}`}
+      style={{
+        '--duration': `${toast.duration}ms`,
+        animation: isExiting ? 'toast-slide-out 0.3s ease forwards' : undefined
+      }}
+      onMouseEnter={pauseTimer}
+      onMouseLeave={startTimer}
+    >
+      <span className="toast-icon">{getIcon()}</span>
+      <p className="toast-message">{toast.message}</p>
+      <button type="button" className="toast-close" onClick={handleDismiss}>&times;</button>
+    </div>
+  );
+}
+
 export default function PlayerPage() {
   const [params, setParams] = useSearchParams();
   const [mediaType, setMediaType] = useState('movie');
@@ -58,8 +117,8 @@ export default function PlayerPage() {
   const [season, setSeason] = useState('1');
   const [episode, setEpisode] = useState('1');
   const [server, setServer] = useState(() => {
-    let saved = readStore(SERVER_KEY, "https://vidsrc.me/embed");
-    if (saved.includes("vidsrc.net") || saved.includes("vidsrc.to") || saved.includes("embed.su")) saved = "https://vidsrc.me/embed";
+    let saved = readStore(SERVER_KEY, "https://vidsync.live/embed");
+    if (saved.includes("vidsrc.net") || saved.includes("vidsrc.to") || saved.includes("embed.su")) saved = "https://vidsync.live/embed";
     return saved;
   });
   const [color, setColor] = useState('#d4af37');
@@ -72,6 +131,17 @@ export default function PlayerPage() {
   const [customVideoUrl, setCustomVideoUrl] = useState('');
   const [subtitleSize, setSubtitleSize] = useState(readStore('subtitle_size', '100%'));
   const [customDomain, setCustomDomain] = useState(() => readStore('custom_embed_domain', ''));
+
+  const [toasts, setToasts] = useState([]);
+
+  const showToast = useCallback((message, type = 'info', duration = 5000) => {
+    const id = Date.now() + Math.random().toString(36).substr(2, 9);
+    setToasts(prev => [...prev, { id, message, type, duration }]);
+  }, []);
+
+  const removeToast = useCallback((id) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
 
   const getCurrentEntry = useCallback(() => {
     return getTitleFromEntry({ id: tmdbId, mediaType, title, season, episode });
@@ -99,6 +169,7 @@ export default function PlayerPage() {
   useEffect(() => {
     writeStore('custom_embed_domain', customDomain);
   }, [customDomain]);
+
 
   // Sync state with URL search parameters to support hot-swapping and refreshes without blank screens
   useEffect(() => {
@@ -231,6 +302,7 @@ export default function PlayerPage() {
   const [renderTrigger, setRenderTrigger] = useState(0);
   const [lightsOut, setLightsOut] = useState(false);
   const [showSubtitleTools, setShowSubtitleTools] = useState(false);
+  const [showDownloadTools, setShowDownloadTools] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState('sync'); // 'sync', 'stretch', 'clean', 'replace', 'export'
   const [timeStretchFactor, setTimeStretchFactor] = useState('1.000000');
   const [findText, setFindText] = useState('');
@@ -480,6 +552,21 @@ export default function PlayerPage() {
     URL.revokeObjectURL(newUrl);
   };
 
+  const downloadCustomVideo = () => {
+    if (!customVideoUrl) {
+      showToast("No custom video source provided to download.", 'warning');
+      return;
+    }
+    const a = document.createElement('a');
+    a.href = customVideoUrl;
+    a.download = title ? `${title.replace(/[^a-zA-Z0-9]/g, '_')}.mp4` : 'video.mp4';
+    a.target = '_blank';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast("Attempting to download video source...", 'info');
+  };
+
   const normalizeSubtitleText = (rawText) => {
     let text = rawText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
     
@@ -628,7 +715,8 @@ export default function PlayerPage() {
           : `${title.replace(/[^a-zA-Z0-9]/g, '_')}_Subtitle.vtt`;
         
         // Only VidSrc servers support URL-based subtitle injection.
-        const isVidsrc = server.includes('vidsrc');
+        const activeServer = server === 'custom_domain' ? customDomain : server;
+        const isVidsrc = activeServer.includes('vidsrc') || activeServer.includes('vidsync') || activeServer.includes('vidcore');
 
         if (!isVidsrc) {
           // Download directly for Vidking and other third-party servers that don't support URL injection
@@ -641,14 +729,14 @@ export default function PlayerPage() {
           a.click();
           document.body.removeChild(a);
           URL.revokeObjectURL(newUrl);
-          alert("This provider (Vidking) does not support automatic subtitle injection.\n\nWe have downloaded the subtitle file to your device. Please click the CC/Subtitle button inside the player to upload it manually. You can adjust the offset/position and click 'Download Subtitles' to save it again.");
+          showToast("This provider (Vidking) does not support automatic subtitle injection.\n\nWe have downloaded the subtitle file to your device. Please click the CC/Subtitle button inside the player to upload it manually. You can adjust the offset/position and click 'Download Subtitles' to save it again.", 'warning', 10000);
           return;
         }
 
         try {
           const uploadedUrl = await uploadSubtitleToTempHost(text, filename);
           setSubUrl(uploadedUrl); // Auto-injects URL and reloads the iframe
-          alert("Subtitle auto-fetched and injected into the player successfully!");
+          showToast("Subtitle auto-fetched and injected into the player successfully!", 'success');
         } catch (uploadErr) {
           const blob = new Blob([text], { type: 'text/vtt' });
           const newUrl = URL.createObjectURL(blob);
@@ -659,21 +747,21 @@ export default function PlayerPage() {
           a.click();
           document.body.removeChild(a);
           URL.revokeObjectURL(newUrl);
-          alert("Subtitle auto-apply failed. Downloaded locally instead! \n\nPlease upload it manually using the 'CC' button.");
+          showToast("Subtitle auto-apply failed. Downloaded locally instead!\n\nPlease upload it manually using the 'CC' button.", 'error', 8000);
         }
       } else {
-        alert("Subtitles automatically generated and applied to your custom player!");
+        showToast("Subtitles automatically generated and applied to your custom player!", 'success');
       }
     } catch (err) {
       console.error(err);
-      alert(`Error fetching subtitles: ${err.message}`);
+      showToast(`Error fetching subtitles: ${err.message}`, 'error');
     } finally {
       setIsFetchingSubs(false);
     }
   };
 
   useEffect(() => {
-    if (mediaType !== 'tv' || !DEFAULT_TMDB_KEY) return;
+    if (!tmdbId || mediaType !== 'tv' || !DEFAULT_TMDB_KEY) return;
     fetch(`${TMDB_API_URL}/tv/${tmdbId}?language=en-US&api_key=${DEFAULT_TMDB_KEY}`, { headers: getTmdbHeaders(DEFAULT_TMDB_KEY) })
       .then(res => {
         if (!res.ok) throw new Error("Failed to fetch TV details");
@@ -705,7 +793,7 @@ export default function PlayerPage() {
   }, [tmdbId, mediaType]);
 
   useEffect(() => {
-    if (mediaType !== 'movie' || !DEFAULT_TMDB_KEY) return;
+    if (!tmdbId || mediaType !== 'movie' || !DEFAULT_TMDB_KEY) return;
     fetch(`${TMDB_API_URL}/movie/${tmdbId}?language=en-US&api_key=${DEFAULT_TMDB_KEY}`, { headers: getTmdbHeaders(DEFAULT_TMDB_KEY) })
       .then(res => {
         if (!res.ok) throw new Error("Failed to fetch Movie details");
@@ -735,7 +823,7 @@ export default function PlayerPage() {
   }, [tmdbId, mediaType]);
 
   useEffect(() => {
-    if (mediaType !== 'tv' || !DEFAULT_TMDB_KEY) return;
+    if (!tmdbId || mediaType !== 'tv' || !DEFAULT_TMDB_KEY) return;
     fetch(`${TMDB_API_URL}/tv/${tmdbId}/season/${season}?language=en-US&api_key=${DEFAULT_TMDB_KEY}`, { headers: getTmdbHeaders(DEFAULT_TMDB_KEY) })
       .then(res => res.json())
       .then(data => setEpisodesList(data.episodes || []));
@@ -766,7 +854,7 @@ export default function PlayerPage() {
         setParams(newParams);
         window.scrollTo({top: 0, behavior: 'smooth'});
       } else {
-        alert("You have reached the end of the series!");
+        showToast("You have reached the end of the series!", 'info');
       }
     }
   };
@@ -825,16 +913,17 @@ export default function PlayerPage() {
   };
 
   return (
-    <main 
-      className={`player-shell ${lightsOut ? 'lights-out' : ''}`}
-      style={{
-        '--sub-size': `calc((1.25rem + 0.3vw) * ${parseFloat(subtitleSize) / 100})`
-      }}
-    >
+    <>
+      <div className="toast-container">
+        {toasts.map(t => (
+          <ToastItem key={t.id} toast={t} onDismiss={removeToast} />
+        ))}
+      </div>
+      <main className={`player-shell ${lightsOut ? 'lights-out' : ''}`}>
       <style>{`
         ::cue,
         video::cue {
-          font-size: var(--sub-size, 24px) !important;
+          font-size: calc((1.25rem + 0.3vw) * ${parseFloat(subtitleSize) / 100}) !important;
           background: rgba(0, 0, 0, 0.75) !important;
           color: #ffffff !important;
           text-shadow: 1px 1px 2px #000, -1px -1px 2px #000, 1px -1px 2px #000, -1px 1px 2px #000 !important;
@@ -843,7 +932,7 @@ export default function PlayerPage() {
           padding: 2px 6px !important;
         }
         video::-webkit-media-text-track-display {
-          font-size: var(--sub-size, 24px) !important;
+          font-size: calc((1.25rem + 0.3vw) * ${parseFloat(subtitleSize) / 100}) !important;
           background: rgba(0, 0, 0, 0.75) !important;
           color: #ffffff !important;
           text-shadow: 1px 1px 2px #000, -1px -1px 2px #000, 1px -1px 2px #000, -1px 1px 2px #000 !important;
@@ -962,6 +1051,33 @@ export default function PlayerPage() {
             </div>
           )}
 
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '-10px', marginBottom: '10px' }}>
+            {server === 'custom' ? (
+              <button 
+                type="button" 
+                className="secondary-button" 
+                onClick={downloadCustomVideo}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 16px', background: 'var(--metaphor-gold)', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+              >
+                💾 Download Video File
+              </button>
+            ) : (
+              <button 
+                type="button" 
+                className="secondary-button" 
+                onClick={() => {
+                  setShowDownloadTools(true);
+                  const el = document.querySelector('.player-sidebar');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  showToast("Use one of the downloader tools in the sidebar to download the iframe stream!", 'info');
+                }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 16px', border: '1px solid rgba(212, 175, 55, 0.4)', background: 'rgba(212, 175, 55, 0.05)', color: 'var(--gold-light)', borderRadius: '4px', cursor: 'pointer' }}
+              >
+                📥 Download Video Options
+              </button>
+            )}
+          </div>
+
           {mediaType === 'tv' && (
             <div className="episodes-section" style={{ width: '100%' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '1.5rem', borderBottom: '1px solid rgba(212, 175, 55, 0.2)', paddingBottom: '12px' }}>
@@ -1030,6 +1146,8 @@ export default function PlayerPage() {
                   <option value="https://vidsrc.me/embed">VidSrc.me (Most Reliable)</option>
                   <option value="https://vidsrc.in/embed">VidSrc.in</option>
                   <option value="https://vidsrc.pm/embed">VidSrc.pm</option>
+                  <option value="https://vidsync.live/embed">VidSync.live</option>
+                  <option value="https://vidcore.org/embed">VidCore.org</option>
                   <option value="https://www.vidking.net/embed">Vidking</option>
                 </optgroup>
                 <optgroup label="Advanced Players">
@@ -1094,7 +1212,7 @@ export default function PlayerPage() {
                       setSubtitleText(normalized);
                       setSubtitleOffset(0);
                       setSubPosition('');
-                      alert("Custom subtitle loaded successfully!");
+                      showToast("Custom subtitle loaded successfully!", 'success');
                     };
                     reader.readAsText(file);
                   }
@@ -1209,6 +1327,89 @@ export default function PlayerPage() {
                       </div>
                       <div style={{ fontSize: '0.8rem', color: 'var(--text)', opacity: 0.9 }}>
                         <a href="https://github.com/neveraway/penguin-subtitle-player" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', fontWeight: 'bold', textDecoration: 'underline' }}>Penguin Subtitle Player</a>: A floating, semi-transparent subtitle player window that overlays on top of video streams.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <button 
+                type="button" 
+                className="secondary-button" 
+                style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', padding: '10px 14px', border: '1px solid rgba(212, 175, 55, 0.4)', background: 'rgba(212, 175, 55, 0.05)', color: 'var(--gold-light)', marginBottom: '8px' }} 
+                onClick={() => setShowDownloadTools(!showDownloadTools)}
+              >
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  <span>Video Download & Player Tools</span>
+                </span>
+                <span>{showDownloadTools ? '▲' : '▼'}</span>
+              </button>
+
+              {showDownloadTools && (
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px',
+                  padding: '16px',
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  marginBottom: '12px',
+                  maxHeight: '450px',
+                  overflowY: 'auto'
+                }}>
+                  {server === 'custom' ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <strong style={{ fontSize: '0.85rem', color: 'var(--gold-light)' }}>Direct Download</strong>
+                      <p style={{ margin: 0, fontSize: '0.8rem', color: '#ccc' }}>
+                        You are using the Custom HTML5 Video Player. You can download the video file directly:
+                      </p>
+                      <button 
+                        type="button" 
+                        className="secondary-button" 
+                        onClick={downloadCustomVideo}
+                        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px', background: 'var(--metaphor-gold)', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                      >
+                        💾 Download Video File
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <strong style={{ fontSize: '0.85rem', color: 'var(--gold-light)' }}>Iframe Streams Notice</strong>
+                      <p style={{ margin: 0, fontSize: '0.8rem', color: '#ccc' }}>
+                        Due to browser security policy, third-party embedded video streams (like VidSync, VidCore, etc.) cannot be downloaded directly via single click.
+                      </p>
+                    </div>
+                  )}
+
+                  <hr style={{ border: 'none', borderTop: '1px solid rgba(255, 255, 255, 0.08)', margin: '4px 0' }} />
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <strong style={{ fontSize: '0.85rem', color: 'var(--gold-light)' }}>Stream Downloader Extensions (FMHY)</strong>
+                    <div style={{ display: 'grid', gap: '8px' }}>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text)', opacity: 0.9 }}>
+                        <a href="https://faststream.online/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', fontWeight: 'bold', textDecoration: 'underline' }}>FastStream</a>: Fragmentation streaming browser extension. Highly recommended to capture, buffer, and download HLS/M3U8 streams directly from the players.
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text)', opacity: 0.9 }}>
+                        <a href="https://openvideofs.github.io/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', fontWeight: 'bold', textDecoration: 'underline' }}>OpenVideo</a>: Play and download web videos with ad-blocking and native video controls support.
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text)', opacity: 0.9 }}>
+                        <a href="https://github.com/ByteDream/stream-bypass" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', fontWeight: 'bold', textDecoration: 'underline' }}>Stream-Bypass</a>: Bypass streaming site blocks and download directly.
+                      </div>
+                    </div>
+                  </div>
+
+                  <hr style={{ border: 'none', borderTop: '1px solid rgba(255, 255, 255, 0.08)', margin: '4px 0' }} />
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <strong style={{ fontSize: '0.85rem', color: 'var(--gold-light)' }}>Command Line Tools</strong>
+                    <div style={{ display: 'grid', gap: '8px' }}>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text)', opacity: 0.9 }}>
+                        <a href="https://github.com/nilaoda/N_m3u8DL-RE" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', fontWeight: 'bold', textDecoration: 'underline' }}>M3u8DL-RE</a>: CLI tool to download `.m3u8` / HLS streams and mux them into MP4/MKV.
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text)', opacity: 0.9 }}>
+                        <a href="https://streamlink.github.io/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', fontWeight: 'bold', textDecoration: 'underline' }}>Streamlink</a>: Pipe web streams into local players or record streams straight to disk.
                       </div>
                     </div>
                   </div>
@@ -1452,16 +1653,16 @@ export default function PlayerPage() {
                         onClick={() => {
                           const cleaned = cleanSdhFromText(subtitleText);
                           setSubtitleText(cleaned);
-                          alert("Hearing-impaired descriptors (SDH) cleaned successfully!");
+                          showToast("Hearing-impaired descriptors (SDH) cleaned successfully!", 'success');
                         }}
                       >
                         🧹 Clean Hearing Impaired (SDH)
                       </button>
 
                       <div style={{ display: 'flex', gap: '4px' }}>
-                        <button type="button" className="secondary-button" style={{ flex: 1, minHeight: '32px', fontSize: '0.75rem' }} onClick={() => { setSubtitleText(convertTextCase(subtitleText, 'upper')); alert("Converted to UPPERCASE!"); }}>UPPERCASE</button>
-                        <button type="button" className="secondary-button" style={{ flex: 1, minHeight: '32px', fontSize: '0.75rem' }} onClick={() => { setSubtitleText(convertTextCase(subtitleText, 'lower')); alert("Converted to lowercase!"); }}>lowercase</button>
-                        <button type="button" className="secondary-button" style={{ flex: 1, minHeight: '32px', fontSize: '0.75rem' }} onClick={() => { setSubtitleText(convertTextCase(subtitleText, 'sentence')); alert("Converted to Sentence case!"); }}>Sentence case</button>
+                        <button type="button" className="secondary-button" style={{ flex: 1, minHeight: '32px', fontSize: '0.75rem' }} onClick={() => { setSubtitleText(convertTextCase(subtitleText, 'upper')); showToast("Converted to UPPERCASE!", 'success'); }}>UPPERCASE</button>
+                        <button type="button" className="secondary-button" style={{ flex: 1, minHeight: '32px', fontSize: '0.75rem' }} onClick={() => { setSubtitleText(convertTextCase(subtitleText, 'lower')); showToast("Converted to lowercase!", 'success'); }}>lowercase</button>
+                        <button type="button" className="secondary-button" style={{ flex: 1, minHeight: '32px', fontSize: '0.75rem' }} onClick={() => { setSubtitleText(convertTextCase(subtitleText, 'sentence')); showToast("Converted to Sentence case!", 'success'); }}>Sentence case</button>
                       </div>
                     </div>
                   )
@@ -1499,7 +1700,7 @@ export default function PlayerPage() {
                         onClick={() => {
                           const replaced = findAndReplaceInText(subtitleText, findText, replaceText);
                           setSubtitleText(replaced);
-                          alert(`Replaced all occurrences of "${findText}" with "${replaceText}"!`);
+                          showToast(`Replaced all occurrences of "${findText}" with "${replaceText}"!`, 'success');
                           setFindText('');
                           setReplaceText('');
                         }}
@@ -1665,5 +1866,6 @@ export default function PlayerPage() {
         </div>
       </section>
     </main>
+    </>
   );
 }
