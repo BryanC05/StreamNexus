@@ -921,6 +921,127 @@ async function fetchRecommendations(mediaType, tmdbId, credential) {
   return list.slice(0, 21); // Return top 21 recommendations
 }
 
+// Feature #11: Personalized Recommendations based on watch history
+async function getPersonalizedRecommendations(type = 'all', limit = 20) {
+  const HISTORY_KEY = 'streamnexus_history';
+  const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+  
+  if (history.length === 0) {
+    return [];
+  }
+  
+  // Analyze watch history to get preferred genres and actors
+  const genreCount = {};
+  const actorCount = {};
+  const watchedIds = new Set();
+  
+  history.forEach(entry => {
+    watchedIds.add(String(entry.id));
+    if (entry.genreIds) {
+      entry.genreIds.forEach(g => {
+        genreCount[g] = (genreCount[g] || 0) + 1;
+      });
+    }
+    // Note: actor data might not be in history, but we can use it if available
+    if (entry.credits && entry.credits.cast) {
+      entry.credits.cast.slice(0, 5).forEach(actor => {
+        actorCount[actor.id] = (actorCount[actor.id] || 0) + 1;
+      });
+    }
+  });
+  
+  // Get top genres (sorted by frequency)
+  const topGenres = Object.entries(genreCount)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([id]) => Number(id));
+  
+  // Get top actors (sorted by frequency)
+  const topActors = Object.entries(actorCount)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([id]) => Number(id));
+  
+  // Fetch recommendations from TMDB for top genres
+  let recommendations = [];
+  const credential = window.ENV?.TMDB_API_KEY || (typeof import.meta !== 'undefined' && import.meta.env.VITE_TMDB_API_KEY);
+  
+  if (credential && topGenres.length > 0) {
+    try {
+      // Discover by genre
+      for (const genreId of topGenres) {
+        try {
+          const url = new URL('https://api.themoviedb.org/3/discover/movie');
+          url.searchParams.set('api_key', credential);
+          url.searchParams.set('with_genres', genreId);
+          url.searchParams.set('sort_by', 'popularity.desc');
+          url.searchParams.set('page', '1');
+          url.searchParams.set('language', 'en-US');
+          
+          const response = await fetch(url.toString());
+          const data = await response.json();
+          
+          if (data.results) {
+            const movies = data.results
+              .filter(m => m.poster_path && !watchedIds.has(String(m.id)))
+              .map(normalizeMovie);
+            recommendations = [...recommendations, ...movies];
+          }
+        } catch (err) {
+          console.warn(`Failed to fetch genre ${genreId} recommendations:`, err);
+        }
+        
+        // Also fetch TV shows if type is 'all' or 'tv'
+        if (type === 'all' || type === 'tv') {
+          try {
+            const url = new URL('https://api.themoviedb.org/3/discover/tv');
+            url.searchParams.set('api_key', credential);
+            url.searchParams.set('with_genres', genreId);
+            url.searchParams.set('sort_by', 'popularity.desc');
+            url.searchParams.set('page', '1');
+            url.searchParams.set('language', 'en-US');
+            
+            const response = await fetch(url.toString());
+            const data = await response.json();
+            
+            if (data.results) {
+              const tvShows = data.results
+                .filter(t => t.poster_path && !watchedIds.has(String(t.id)))
+                .map(normalizeTv);
+              recommendations = [...recommendations, ...tvShows];
+            }
+          } catch (err) {
+            console.warn(`Failed to fetch TV genre ${genreId} recommendations:`, err);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to fetch personalized recommendations:', err);
+    }
+  }
+  
+  // Remove duplicates and limit
+  const seen = new Set();
+  recommendations = recommendations.filter(item => {
+    if (seen.has(String(item.id))) return false;
+    seen.add(String(item.id));
+    return true;
+  });
+  
+  // If we have less than limit, fill with popular items
+  if (recommendations.length < limit) {
+    const catalogData = getActiveCatalog();
+    const allItems = [...(catalogData.movie || []), ...(catalogData.tv || [])];
+    const popularFillers = allItems
+      .filter(item => !watchedIds.has(String(item.id)) && !seen.has(String(item.id)))
+      .sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0))
+      .slice(0, limit - recommendations.length);
+    recommendations = [...recommendations, ...popularFillers];
+  }
+  
+  return recommendations.slice(0, limit);
+}
+
 async function autoFetchSubtitles(tmdbId, mediaType, season, episode) {
   const apiKey = (typeof window !== 'undefined' && window.ENV?.SUBDL_API_KEY) || (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SUBDL_API_KEY) || "";
   if (!apiKey) throw new Error("SubDL API key not configured in env.js");
@@ -2380,7 +2501,7 @@ export {
   formatTvTotals, getYear, getImageUrl, normalizeMovie, normalizeTv,
   fetchTvStats, getTmdbHeaders, getTmdbUrl, fetchTmdbPage,
   fetchTmdbPages, fetchPopularCatalog, searchTmdb, autoFetchSubtitles,
-  uploadSubtitleToTempHost, fetchRecommendations,
+  uploadSubtitleToTempHost, fetchRecommendations, getPersonalizedRecommendations,
   fetchReviews, fetchTmdbReviews, submitReview,
   
   getToken, getUsername, isLoggedIn, logout, apiRegister, apiLogin,
