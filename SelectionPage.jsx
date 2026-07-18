@@ -4,7 +4,7 @@ import {
   DEFAULT_TMDB_KEY, getCachedCatalog, getActiveCatalog, catalog,
   formatTvTotals, fetchPopularCatalog, TMDB_CACHE_KEY, isFavorite, toggleFavorite,
   fetchTvStats, getSavedProgress, searchTmdb, getUsername, isLoggedIn, getPersonalizedRecommendations,
-  getHistory, getEpisodeProgress, setEpisodeProgress, getWatchedEpisodes
+  getHistory, getEpisodeProgress, setEpisodeProgress, getWatchedEpisodes, clearAllHistory, deleteFromHistory
 } from './app.js';
 import './royal-theme.css';
 
@@ -164,6 +164,155 @@ function GenreRow({ title, items, forceRender }) {
   );
 }
 
+function RecentlyWatchedRow({ items, forceRender, onClearAll, onRemove }) {
+  if (!items || items.length === 0) return null;
+
+  const [visibleCount, setVisibleCount] = useState(25);
+  const rowRef = useRef(null);
+  const isDragging = useRef(false);
+  const startX = useRef(0);
+  const scrollLeft = useRef(0);
+  const hasMoved = useRef(false);
+
+  const handleMouseDown = (e) => {
+    isDragging.current = true;
+    hasMoved.current = false;
+    startX.current = e.pageX - rowRef.current.offsetLeft;
+    scrollLeft.current = rowRef.current.scrollLeft;
+    rowRef.current.style.cursor = 'grabbing';
+    rowRef.current.style.scrollBehavior = 'auto';
+    rowRef.current.style.scrollSnapType = 'none';
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging.current) return;
+    const x = e.pageX - rowRef.current.offsetLeft;
+    const walk = (x - startX.current) * 1.5;
+    if (Math.abs(walk) > 8) {
+      hasMoved.current = true;
+    }
+    rowRef.current.scrollLeft = scrollLeft.current - walk;
+    handleScroll();
+  };
+
+  const handleMouseUpOrLeave = () => {
+    if (!isDragging.current) return;
+    isDragging.current = false;
+    rowRef.current.style.cursor = 'grab';
+    rowRef.current.style.scrollBehavior = 'smooth';
+    rowRef.current.style.scrollSnapType = 'x mandatory';
+  };
+
+  const handleClickCapture = (e) => {
+    if (hasMoved.current) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
+  const handleScroll = () => {
+    if (!rowRef.current) return;
+    const { scrollLeft: sLeft, clientWidth, scrollWidth } = rowRef.current;
+    if (sLeft + clientWidth >= scrollWidth - 500) {
+      setVisibleCount(prev => Math.min(prev + 25, items.length));
+    }
+  };
+
+  const displayed = items.slice(0, visibleCount);
+
+  return (
+    <div style={{ marginBottom: '2rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <h3 style={{ margin: 0, fontSize: '1.25rem' }}>🕐 Recently Watched</h3>
+        <button 
+          type="button" 
+          onClick={onClearAll}
+          style={{
+            background: 'rgba(220, 53, 69, 0.15)',
+            color: '#dc3545',
+            border: '1px solid rgba(220, 53, 69, 0.3)',
+            borderRadius: '6px',
+            padding: '6px 12px',
+            fontSize: '0.8rem',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.background = 'rgba(220, 53, 69, 0.25)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.background = 'rgba(220, 53, 69, 0.15)';
+          }}
+        >
+          Clear All
+        </button>
+      </div>
+      <div 
+        ref={rowRef}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUpOrLeave}
+        onMouseLeave={handleMouseUpOrLeave}
+        onScroll={handleScroll}
+        onClickCapture={handleClickCapture}
+        onDragStart={(e) => e.preventDefault()}
+        style={{ 
+          display: 'flex', 
+          gap: '18px', 
+          overflowX: 'auto', 
+          paddingBottom: '1rem', 
+          scrollSnapType: 'x mandatory',
+          cursor: 'grab',
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
+          position: 'relative'
+        }}
+      >
+        {displayed.map((item, idx) => (
+          <div key={`${item.id}-${idx}`} style={{ flex: '0 0 170px', scrollSnapAlign: 'start', pointerEvents: 'auto', position: 'relative' }}>
+            <PosterCard item={item} forceRender={forceRender} />
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onRemove(item);
+              }}
+              style={{
+                position: 'absolute',
+                top: '8px',
+                right: '8px',
+                width: '28px',
+                height: '28px',
+                borderRadius: '50%',
+                background: 'rgba(0, 0, 0, 0.7)',
+                color: '#fff',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '1.1rem',
+                opacity: 0,
+                transition: 'opacity 0.2s ease',
+                zIndex: 10
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = 'rgba(220, 53, 69, 0.9)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = 'rgba(0, 0, 0, 0.7)';
+              }}
+            >
+              ×
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function SelectionPage() {
   const [filterMediaType, setFilterMediaType] = useState('all');
   const [status, setStatus] = useState('');
@@ -185,6 +334,27 @@ export default function SelectionPage() {
     const history = getHistory();
     setRecentlyWatched(history.slice(0, 12));
   }, []);
+
+  // Handle removing a specific item from history
+  const handleRemoveFromHistory = (item) => {
+    if (!confirm(`Remove "${item.title}" from watch history?`)) return;
+    deleteFromHistory(item);
+    setRecentlyWatched(prev => prev.filter(i => {
+      if (item.mediaType === "tv") {
+        return String(i.id) !== String(item.id);
+      }
+      return i.id !== item.id;
+    }));
+    forceRender();
+  };
+
+  // Handle clearing entire history
+  const handleClearAllHistory = () => {
+    if (!confirm('Clear ALL watch history? This cannot be undone.')) return;
+    clearAllHistory();
+    setRecentlyWatched([]);
+    forceRender();
+  };
 
   // Feature #11: Load personalized recommendations on mount
   useEffect(() => {
@@ -415,15 +585,14 @@ export default function SelectionPage() {
           </div>
         </div>
         
-        {/* Feature #1: Recently Watched Row (always show when there's history and no search active) */}
+        {/* Feature #1: Recently Watched Row with history management (deployed 2026-07-18T17:12:00Z) */}
         {!searchQuery.trim() && recentlyWatched.length > 0 && (
-          <div style={{ marginBottom: '2rem' }}>
-            <GenreRow 
-              title="🕐 Recently Watched" 
-              items={recentlyWatched} 
-              forceRender={forceRender} 
-            />
-          </div>
+          <RecentlyWatchedRow 
+            items={recentlyWatched}
+            forceRender={forceRender}
+            onClearAll={handleClearAllHistory}
+            onRemove={handleRemoveFromHistory}
+          />
         )}
 
         {isGridView ? (

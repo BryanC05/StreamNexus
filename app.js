@@ -590,9 +590,35 @@ function toggleFavorite(entry) {
 function saveHistory(entry) {
   const normalized = getTitleFromEntry(entry);
   const key = getContentKey(normalized);
+  const history = getHistory();
+  
+  // For TV shows: group by series ID only, update to latest episode watched
+  if (normalized.mediaType === "tv") {
+    const existingIndex = history.findIndex(item => 
+      item.mediaType === "tv" && String(item.id) === String(normalized.id)
+    );
+    
+    if (existingIndex !== -1) {
+      // Update existing series entry with latest episode info
+      history[existingIndex] = {
+        ...normalized,
+        watchedAt: Date.now(),
+        // Keep the latest season/episode info
+        season: normalized.season || history[existingIndex].season,
+        episode: normalized.episode || history[existingIndex].episode,
+      };
+      // Move to front
+      const updated = history.splice(existingIndex, 1)[0];
+      history.unshift(updated);
+      writeStore(HISTORY_KEY, history);
+      return;
+    }
+  }
+  
+  // For movies or new TV series: add to front and remove old entries
   const next = [
     { ...normalized, watchedAt: Date.now() },
-    ...getHistory().filter((item) => {
+    ...history.filter((item) => {
       if (normalized.mediaType === "tv" && item.mediaType === "tv") {
         return String(item.id) !== String(normalized.id);
       }
@@ -601,6 +627,37 @@ function saveHistory(entry) {
   ].slice(0, 80);
 
   writeStore(HISTORY_KEY, next);
+}
+
+function getHistory() {
+  const history = readStore(HISTORY_KEY, []);
+  const seen = new Set();
+  return history.map((item) => ({
+    ...item,
+    // Ensure series-level grouping key
+    seriesKey: item.mediaType === "tv" ? String(item.id) : `movie:${item.id}`,
+  }));
+}
+
+function clearAllHistory() {
+  writeStore(HISTORY_KEY, []);
+  if (isLoggedIn()) apiSyncPush().catch(() => {});
+}
+
+function deleteFromHistory(entry) {
+  const normalized = getTitleFromEntry(entry);
+  const key = getContentKey(normalized);
+  const history = readStore(HISTORY_KEY, []);
+  
+  const filtered = history.filter((item) => {
+    if (normalized.mediaType === "tv" && item.mediaType === "tv") {
+      return String(item.id) !== String(normalized.id);
+    }
+    return getContentKey(item) !== key;
+  });
+  
+  writeStore(HISTORY_KEY, filtered);
+  if (isLoggedIn()) apiSyncPush().catch(() => {});
 }
 
 function saveProgress(entry, playerData) {
@@ -2535,7 +2592,7 @@ export {
   catalog, cleanNumber, getCachedCatalog, getActiveCatalog,
   findTitle, readStore, writeStore, getContentKey, getTitleFromEntry,
   getFavorites, getHistory, getProgressStore, getGlobalWatchTime,
-  addGlobalWatchTime, isFavorite, toggleFavorite, saveHistory,
+  addGlobalWatchTime, isFavorite, toggleFavorite, saveHistory, clearAllHistory, deleteFromHistory,
   saveProgress, getSavedProgress, formatDuration, formatDate,
   formatTvTotals, getYear, getImageUrl, normalizeMovie, normalizeTv,
   fetchTvStats, getTmdbHeaders, getTmdbUrl, fetchTmdbPage,
@@ -2543,7 +2600,7 @@ export {
   uploadSubtitleToTempHost, fetchRecommendations, getPersonalizedRecommendations,
   fetchReviews, fetchTmdbReviews, submitReview,
   getEpisodeProgress, setEpisodeProgress, getWatchedEpisodes,
-  
+
   getToken, getUsername, isLoggedIn, logout, apiRegister, apiLogin,
   apiSyncPull, apiSyncPush, apiClearCloud
 };
