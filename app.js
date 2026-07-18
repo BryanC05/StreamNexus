@@ -629,16 +629,6 @@ function saveHistory(entry) {
   writeStore(HISTORY_KEY, next);
 }
 
-function getHistory() {
-  const history = readStore(HISTORY_KEY, []);
-  const seen = new Set();
-  return history.map((item) => ({
-    ...item,
-    // Ensure series-level grouping key
-    seriesKey: item.mediaType === "tv" ? String(item.id) : `movie:${item.id}`,
-  }));
-}
-
 function clearAllHistory() {
   writeStore(HISTORY_KEY, []);
   if (isLoggedIn()) apiSyncPush().catch(() => {});
