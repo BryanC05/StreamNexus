@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   DEFAULT_TMDB_KEY, getCachedCatalog, getActiveCatalog, catalog,
   formatTvTotals, fetchPopularCatalog, TMDB_CACHE_KEY, isFavorite, toggleFavorite,
-  fetchTvStats, getSavedProgress, searchTmdb, getUsername, isLoggedIn
+  fetchTvStats, getSavedProgress, searchTmdb, getUsername, isLoggedIn, getHistory
 } from './app.js';
 import './royal-theme.css';
 
@@ -174,6 +174,7 @@ export default function SelectionPage() {
   const [selectedGenre, setSelectedGenre] = useState('');
   const [filterYear, setFilterYear] = useState('');
   const [selectedSort, setSelectedSort] = useState('popular');
+  const [recentlyWatched, setRecentlyWatched] = useState([]);
   const forceRender = () => setRenderTrigger(prev => prev + 1);
 
   useEffect(() => {
@@ -194,6 +195,10 @@ export default function SelectionPage() {
       }
     };
     loadRemote();
+    
+    // Load recently watched history
+    const history = getHistory();
+    setRecentlyWatched(history.slice(0, 10));
   }, []);
 
   useEffect(() => {
@@ -284,6 +289,80 @@ export default function SelectionPage() {
           </Link>
         </div>
       </header>
+      
+      {/* Recently Watched Carousel */}
+      {recentlyWatched.length > 0 && (
+        <section className="catalog-section" style={{ marginBottom: '2rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.25rem' }}>Recently Watched</h3>
+            <div 
+              onMouseDown={(e) => {
+                const row = e.currentTarget;
+                let isDragging = true;
+                let hasMoved = false;
+                const startX = e.pageX - row.offsetLeft;
+                const scrollLeft = row.scrollLeft;
+                row.style.cursor = 'grabbing';
+                row.style.scrollBehavior = 'auto';
+                row.style.scrollSnapType = 'none';
+                
+                const handleMouseMove = (ev) => {
+                  if (!isDragging) return;
+                  const x = ev.pageX - row.offsetLeft;
+                  const walk = (x - startX) * 1.5;
+                  if (Math.abs(walk) > 8) hasMoved = true;
+                  row.scrollLeft = scrollLeft - walk;
+                };
+                
+                const handleMouseUp = () => {
+                  if (!isDragging) return;
+                  isDragging = false;
+                  row.style.cursor = 'grab';
+                  row.style.scrollBehavior = 'smooth';
+                  row.style.scrollSnapType = 'x mandatory';
+                };
+                
+                const handleClickCapture = (ev) => {
+                  if (hasMoved) {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                  }
+                };
+                
+                row.addEventListener('mousemove', handleMouseMove);
+                row.addEventListener('mouseup', handleMouseUp);
+                row.addEventListener('mouseleave', handleMouseUp);
+                row.addEventListener('click', handleClickCapture, true);
+                
+                setTimeout(() => {
+                  row.removeEventListener('mousemove', handleMouseMove);
+                  row.removeEventListener('mouseup', handleMouseUp);
+                  row.removeEventListener('mouseleave', handleMouseUp);
+                  row.removeEventListener('click', handleClickCapture, true);
+                }, 100);
+              }}
+              onDragStart={(e) => e.preventDefault()}
+              style={{ 
+                display: 'flex', 
+                gap: '18px', 
+                overflowX: 'auto', 
+                paddingBottom: '1rem', 
+                scrollSnapType: 'x mandatory',
+                cursor: 'grab',
+                userSelect: 'none',
+                WebkitUserSelect: 'none'
+              }}
+            >
+              {recentlyWatched.map((item, idx) => (
+                <div key={`history-${item.id}-${idx}`} style={{ flex: '0 0 170px', scrollSnapAlign: 'start' }}>
+                  <PosterCard item={item} forceRender={forceRender} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+      
       <section className="tmdb-panel">
         <div><p className="eyebrow">Catalog Source</p><h2>Dashboard Statistics</h2></div>
         <p className="status-line">{status}</p>
