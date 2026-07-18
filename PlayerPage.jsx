@@ -5,7 +5,7 @@ import {
   getTitleFromEntry, isFavorite, toggleFavorite, saveProgress,
   getSavedProgress, SERVER_KEY, readStore, writeStore, autoFetchSubtitles,
   uploadSubtitleToTempHost, fetchRecommendations, fetchReviews, fetchTmdbReviews, submitReview,
-  isLoggedIn
+  isLoggedIn, getEpisodeProgress, setEpisodeProgress
 } from './app.js';
 import './royal-theme.css';
 
@@ -1121,15 +1121,35 @@ export default function PlayerPage() {
                 <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--parchment-dim)' }}>Loading episodes for Season {season}...</div>
               ) : (
                 <div style={{ display: 'grid', gap: '1.25rem', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
-                  {episodesList.map(ep => (
-                    <button key={ep.episode_number} onClick={() => { setEpisode(ep.episode_number); setProgress(''); window.scrollTo({top: 0, behavior: 'smooth'}); }} className={`episode-button ${Number(episode) === ep.episode_number ? 'is-active' : ''}`} style={{ display: 'flex', gap: '1rem', padding: '0.75rem', textAlign: 'left', cursor: 'pointer', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', transition: 'all 0.2s ease', overflow: 'hidden' }}>
-                      {ep.still_path ? <img src={`${TMDB_IMAGE_URL}/w342${ep.still_path}`} width="120" height="68" style={{objectFit:'cover', borderRadius: '4px'}} /> : <div style={{width: 120, height: 68, borderRadius: '4px', background: '#222'}} className="episode-placeholder"></div>}
-                      <div style={{ overflow: 'hidden', flex: 1 }}>
-                        <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '0.95rem', color: 'var(--parchment)' }}>{ep.episode_number}. {ep.name || 'TBA'}</h4>
-                        <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--parchment-dim)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: '1.3' }}>{ep.overview || "No description."}</p>
-                      </div>
-                    </button>
-                  ))}
+                  {episodesList.map(ep => {
+                    const isWatched = window.getEpisodeProgress?.(tmdbId, Number(season), ep.episode_number) || false;
+                    return (
+                      <button key={ep.episode_number} onClick={() => { setEpisode(ep.episode_number); setProgress(''); window.scrollTo({top: 0, behavior: 'smooth'}); }} className={`episode-button ${Number(episode) === ep.episode_number ? 'is-active' : ''}`} style={{ display: 'flex', gap: '1rem', padding: '0.75rem', textAlign: 'left', cursor: 'pointer', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', transition: 'all 0.2s ease', overflow: 'hidden', opacity: isWatched ? 0.6 : 1 }} onMouseEnter={e => { if (isWatched) e.currentTarget.style.opacity = '0.75'; }} onMouseLeave={e => { if (isWatched) e.currentTarget.style.opacity = '0.6'; }}>
+                        <div style={{ position: 'relative', flexShrink: 0 }}>
+                          {ep.still_path ? <img src={`${TMDB_IMAGE_URL}/w342${ep.still_path}`} width="120" height="68" style={{objectFit:'cover', borderRadius: '4px'}} /> : <div style={{width: 120, height: 68, borderRadius: '4px', background: '#222'}} className="episode-placeholder"></div>}
+                          <input 
+                            type="checkbox" 
+                            checked={isWatched}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              const newWatched = e.target.checked;
+                              window.setEpisodeProgress?.(tmdbId, Number(season), ep.episode_number, newWatched);
+                              setRenderTrigger(x => x + 1);
+                            }}
+                            style={{ position: 'absolute', bottom: '4px', right: '4px', width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--gold)' }}
+                            title={isWatched ? 'Mark as unwatched' : 'Mark as watched'}
+                          />
+                          {isWatched && (
+                            <div style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(212, 175, 55, 0.9)', borderRadius: '50%', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>✓</div>
+                          )}
+                        </div>
+                        <div style={{ overflow: 'hidden', flex: 1 }}>
+                          <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '0.95rem', color: 'var(--parchment)' }}>{ep.episode_number}. {ep.name || 'TBA'}</h4>
+                          <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--parchment-dim)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: '1.3' }}>{ep.overview || "No description."}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>

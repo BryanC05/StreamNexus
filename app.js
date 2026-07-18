@@ -10,6 +10,7 @@ const HISTORY_KEY = "freevid_history_v1";
 const PROGRESS_KEY = "freevid_progress_v1";
 const WATCH_TIME_KEY = "freevid_watchtime_v1";
 const SERVER_KEY = "freevid_server_v1";
+const EPISODE_PROGRESS_KEY = "streamnexus_episode_progress";
 const TMDB_PAGE_COUNT = 25;
 const TMDB_BATCH_SIZE = 5;
 
@@ -642,6 +643,44 @@ function saveProgress(entry, playerData) {
 
 function getSavedProgress(entry) {
   return getProgressStore()[getContentKey(entry)];
+}
+
+// ==========================================
+// EPISODE PROGRESS TRACKING
+// ==========================================
+function getEpisodeProgress(tmdbId, season, episode) {
+  const store = readStore(EPISODE_PROGRESS_KEY, {});
+  const key = `${tmdbId}:s${season}:e${episode}`;
+  return store[key] === true;
+}
+
+function setEpisodeProgress(tmdbId, season, episode, watched) {
+  const store = readStore(EPISODE_PROGRESS_KEY, {});
+  const key = `${tmdbId}:s${season}:e${episode}`;
+  if (watched) {
+    store[key] = true;
+  } else {
+    delete store[key];
+  }
+  writeStore(EPISODE_PROGRESS_KEY, store);
+}
+
+function getWatchedEpisodes(tmdbId) {
+  const store = readStore(EPISODE_PROGRESS_KEY, {});
+  const watched = [];
+  Object.keys(store).forEach(key => {
+    if (store[key] === true && key.startsWith(`${tmdbId}:`)) {
+      const parts = key.split(':');
+      if (parts.length >= 3) {
+        const season = parseInt(parts[1].replace('s', ''), 10);
+        const episode = parseInt(parts[2].replace('e', ''), 10);
+        if (!isNaN(season) && !isNaN(episode)) {
+          watched.push({ season, episode });
+        }
+      }
+    }
+  });
+  return watched;
 }
 
 // ==========================================
@@ -2371,7 +2410,7 @@ function throttledSyncPush() {
 
 export {
   TMDB_API_URL, TMDB_IMAGE_URL, TMDB_CACHE_KEY, DEFAULT_TMDB_KEY,
-  FAVORITES_KEY, HISTORY_KEY, PROGRESS_KEY, WATCH_TIME_KEY, SERVER_KEY,
+  FAVORITES_KEY, HISTORY_KEY, PROGRESS_KEY, WATCH_TIME_KEY, SERVER_KEY, EPISODE_PROGRESS_KEY,
   catalog, cleanNumber, getCachedCatalog, getActiveCatalog,
   findTitle, readStore, writeStore, getContentKey, getTitleFromEntry,
   getFavorites, getHistory, getProgressStore, getGlobalWatchTime,
@@ -2382,6 +2421,7 @@ export {
   fetchTmdbPages, fetchPopularCatalog, searchTmdb, autoFetchSubtitles,
   uploadSubtitleToTempHost, fetchRecommendations,
   fetchReviews, fetchTmdbReviews, submitReview,
+  getEpisodeProgress, setEpisodeProgress, getWatchedEpisodes,
   
   getToken, getUsername, isLoggedIn, logout, apiRegister, apiLogin,
   apiSyncPull, apiSyncPush, apiClearCloud
