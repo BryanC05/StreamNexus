@@ -427,6 +427,7 @@ export default function SelectionPage() {
         )}
 
         {isGridView ? (
+          <>
             <div className="poster-grid">
               {isSearching ? (
                 <p style={{ gridColumn: '1 / -1', padding: '2rem 0' }}>Searching...</p>
