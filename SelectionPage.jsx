@@ -415,18 +415,18 @@ export default function SelectionPage() {
           </div>
         </div>
         
+        {/* Feature #1: Recently Watched Row (always show when there's history and no search active) */}
+        {!searchQuery.trim() && recentlyWatched.length > 0 && (
+          <div style={{ marginBottom: '2rem' }}>
+            <GenreRow 
+              title="🕐 Recently Watched" 
+              items={recentlyWatched} 
+              forceRender={forceRender} 
+            />
+          </div>
+        )}
+
         {isGridView ? (
-          <>
-            {/* Feature #1: Recently Watched Row (only show when there's history and no search active) */}
-            {!searchQuery.trim() && recentlyWatched.length > 0 && (
-              <div style={{ marginBottom: '2rem' }}>
-                <GenreRow 
-                  title="🕐 Recently Watched" 
-                  items={recentlyWatched} 
-                  forceRender={forceRender} 
-                />
-              </div>
-            )}
             <div className="poster-grid">
               {isSearching ? (
                 <p style={{ gridColumn: '1 / -1', padding: '2rem 0' }}>Searching...</p>
