@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import {
   DEFAULT_TMDB_KEY, getCachedCatalog, getActiveCatalog, catalog,
   formatTvTotals, fetchPopularCatalog, TMDB_CACHE_KEY, isFavorite, toggleFavorite,
-  fetchTvStats, getSavedProgress, searchTmdb, getUsername, isLoggedIn, getPersonalizedRecommendations
+  fetchTvStats, getSavedProgress, searchTmdb, getUsername, isLoggedIn, getPersonalizedRecommendations,
+  getHistory, getEpisodeProgress, setEpisodeProgress, getWatchedEpisodes
 } from './app.js';
 import './royal-theme.css';
 
@@ -176,7 +177,14 @@ export default function SelectionPage() {
   const [selectedSort, setSelectedSort] = useState('popular');
   const [personalizedRecs, setPersonalizedRecs] = useState([]);
   const [loadingRecs, setLoadingRecs] = useState(false);
+  const [recentlyWatched, setRecentlyWatched] = useState([]);
   const forceRender = () => setRenderTrigger(prev => prev + 1);
+
+  // Feature #1: Load recently watched on mount
+  useEffect(() => {
+    const history = getHistory();
+    setRecentlyWatched(history.slice(0, 12));
+  }, []);
 
   // Feature #11: Load personalized recommendations on mount
   useEffect(() => {
@@ -409,6 +417,16 @@ export default function SelectionPage() {
         
         {isGridView ? (
           <>
+            {/* Feature #1: Recently Watched Row (only show when there's history and no search active) */}
+            {!searchQuery.trim() && recentlyWatched.length > 0 && (
+              <div style={{ marginBottom: '2rem' }}>
+                <GenreRow 
+                  title="🕐 Recently Watched" 
+                  items={recentlyWatched} 
+                  forceRender={forceRender} 
+                />
+              </div>
+            )}
             <div className="poster-grid">
               {isSearching ? (
                 <p style={{ gridColumn: '1 / -1', padding: '2rem 0' }}>Searching...</p>
