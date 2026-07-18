@@ -1,0 +1,493 @@
+/* Minimal Light Theme - StreamNexus */
+/* Clean, airy interface with subtle gray tones and minimal accents */
+
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --bg-tertiary: #f1f3f5;
+  --text-primary: #212529;
+  --text-secondary: #495057;
+  --text-dim: #868e96;
+  
+  /* Accent colors */
+  --accent-gray: #495057;
+  --accent-blue: #339af0;
+  --accent-blue-hover: #228be6;
+  --accent-green: #40c057;
+  
+  /* UI elements */
+  --border-color: #dee2e6;
+  --border-light: #e9ecef;
+  --shadow-color: rgba(0, 0, 0, 0.08);
+  --overlay-bg: rgba(255, 255, 255, 0.95);
+  
+  /* Status colors */
+  --success-color: #40c057;
+  --warning-color: #fcc419;
+  --error-color: #fa5252;
+  --info-color: #339af0;
+  
+  /* Card backgrounds */
+  --card-bg: #ffffff;
+  --card-hover: #f8f9fa;
+  
+  /* Gradient backgrounds */
+  --gradient-primary: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%);
+  --gradient-accent: linear-gradient(135deg, #495057 0%, #343a40 100%);
+  --gradient-hero: linear-gradient(180deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,1) 100%);
+}
+
+/* Base styles */
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', sans-serif;
+}
+
+/* Header and Navigation */
+.page-header {
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
+  box-shadow: 0 1px 3px var(--shadow-color);
+}
+
+.header-actions button {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.header-actions button:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--accent-gray);
+  color: var(--text-primary);
+}
+
+/* Buttons */
+.primary-button, .primary-link {
+  background: var(--accent-gray);
+  color: white;
+  border: none;
+  box-shadow: 0 2px 4px var(--shadow-color);
+}
+
+.primary-button:hover, .primary-link:hover {
+  background: #343a40;
+  box-shadow: 0 3px 6px var(--shadow-color);
+  transform: translateY(-1px);
+}
+
+.secondary-button {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.secondary-button:hover {
+  border-color: var(--accent-gray);
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+}
+
+.secondary-button.is-active {
+  background: var(--accent-gray);
+  border-color: var(--accent-gray);
+  color: white;
+}
+
+/* Cards and Posters */
+.poster-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  box-shadow: 0 1px 3px var(--shadow-color);
+}
+
+.poster-card:hover {
+  background: var(--card-hover);
+  border-color: var(--border-color);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px var(--shadow-color);
+}
+
+/* Input Fields */
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="search"],
+textarea,
+select {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(51, 154, 240, 0.1);
+  outline: none;
+}
+
+/* Genre Tags */
+.genre-tag {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.genre-tag:hover {
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+}
+
+/* Stats and Tiles */
+.stat-tile {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  color: var(--text-primary);
+}
+
+.stat-tile.is-active {
+  border-color: var(--accent-gray);
+  background: var(--accent-gray);
+  color: white;
+}
+
+/* Progress Bars */
+progress {
+  background: var(--border-light);
+}
+
+progress::-webkit-progress-bar {
+  background: var(--border-light);
+}
+
+progress::-webkit-progress-value {
+  background: var(--accent-gray);
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-gray);
+}
+
+/* Modal and Dialog */
+.modal-content,
+.dialog-content {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 16px 32px var(--shadow-color);
+  border-radius: 12px;
+}
+
+/* Toast Notifications */
+.toast {
+  background: var(--bg-primary);
+  border-left: 4px solid var(--accent-blue);
+  color: var(--text-primary);
+  box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+.toast.success { border-left-color: var(--success-color); }
+.toast.error { border-left-color: var(--error-color); }
+.toast.warning { border-left-color: var(--warning-color); }
+.toast.info { border-left-color: var(--info-color); }
+
+/* Links */
+a {
+  color: var(--accent-blue);
+}
+
+a:hover {
+  color: var(--accent-blue-hover);
+}
+
+/* Selected / Active States */
+.isSelected, .is-selected {
+  border-color: var(--accent-blue) !important;
+  box-shadow: 0 0 0 2px rgba(51, 154, 240, 0.15);
+}
+
+/* Episode Cards */
+.episode-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+}
+
+.episode-card:hover {
+  border-color: var(--accent-blue);
+  background: var(--card-hover);
+}
+
+/* Reviews */
+.review-card {
+  background: var(--bg-secondary);
+  border-left: 3px solid var(--accent-blue);
+}
+
+/* Lights Out Mode Overlay */
+.lights-out-overlay {
+  background: rgba(0, 0, 0, 0.92);
+}
+
+/* Selection Page */
+.selection-page {
+  background: var(--gradient-primary);
+}
+
+/* Profile Page */
+.profile-shell {
+  background: var(--gradient-primary);
+}
+
+.profile-item {
+  background: var(--card-bg);
+  border: 1px solid var(--border-light);
+}
+
+.profile-item:hover {
+  border-color: var(--border-color);
+}
+
+/* Footer */
+footer {
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  color: var(--text-dim);
+}
+
+/* Hero Section */
+.hero-section {
+  background: var(--gradient-hero);
+}
+
+/* Loading States */
+.loading-skeleton {
+  background: linear-gradient(90deg, var(--bg-tertiary) 25%, var(--bg-secondary) 50%, var(--bg-tertiary) 75%);
+}
+
+/* Tooltips */
+.tooltip {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 2px 8px var(--shadow-color);
+}
+
+/* Badges */
+.badge {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.badge.gold {
+  background: #fff9db;
+  color: #d97706;
+  border-color: #fbbf24;
+}
+
+/* Horizontal Scroll Rows */
+.horizontal-scroll-row::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+/* Video Player Controls */
+.video-controls {
+  background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.8) 100%);
+}
+
+.video-progress-bar {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.video-progress-bar-filled {
+  background: var(--accent-gray);
+}
+
+/* Search Bar */
+.search-bar {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+}
+
+.search-bar:focus-within {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(51, 154, 240, 0.1);
+}
+
+/* Dropdown */
+.dropdown-menu {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 8px 16px var(--shadow-color);
+  border-radius: 8px;
+}
+
+.dropdown-item {
+  color: var(--text-secondary);
+}
+
+.dropdown-item:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.dropdown-item.active {
+  background: rgba(51, 154, 240, 0.1);
+  color: var(--accent-blue);
+}
+
+/* Clean Logo */
+.streamnexus-logo {
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: 1.4rem;
+  letter-spacing: -0.5px;
+}
+
+/* Match Percentage */
+.match-percentage {
+  color: var(--success-color);
+  font-weight: 600;
+}
+
+/* Continue Watching Bar */
+.continue-watching-bar {
+  border-bottom: 2px solid var(--accent-gray);
+}
+
+/* Theme Picker Specific */
+.theme-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.theme-option {
+  background: var(--card-bg);
+  border: 2px solid var(--border-light);
+  border-radius: 12px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.theme-option:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent-blue);
+  box-shadow: 0 6px 12px var(--shadow-color);
+}
+
+.theme-option.is-active {
+  border-color: var(--accent-blue);
+  background: rgba(51, 154, 240, 0.05);
+  box-shadow: 0 0 0 2px rgba(51, 154, 240, 0.15);
+}
+
+.theme-preview {
+  height: 80px;
+  border-radius: 8px;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+  border: 1px solid var(--border-color);
+}
+
+.theme-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.theme-description {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin-top: 0.25rem;
+}
+
+/* Play Button - Minimal Style */
+.play-button {
+  background: var(--accent-blue);
+  color: white;
+  font-weight: 500;
+  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 2px 4px var(--shadow-color);
+}
+
+.play-button:hover {
+  background: var(--accent-blue-hover);
+  box-shadow: 0 3px 6px var(--shadow-color);
+}
+
+.play-button.secondary {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  box-shadow: none;
+}
+
+.play-button.secondary:hover {
+  background: var(--border-color);
+  color: var(--text-primary);
+}
+
+/* Empty States */
+.empty-state {
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+/* Divider Lines */
+.divider {
+  border-top: 1px solid var(--border-color);
+}
+
+/* Content Cards */
+.content-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+/* Action Buttons */
+.action-button {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.88rem;
+}
+
+.action-button:hover {
+  background: var(--border-color);
+  color: var(--text-primary);
+}

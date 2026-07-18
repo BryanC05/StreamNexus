@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   getFavorites, getHistory, getProgressStore, getGlobalWatchTime,
@@ -7,6 +7,24 @@ import {
   getUsername, isLoggedIn, logout, apiRegister, apiLogin, apiClearCloud
 } from './app.js';
 import './royal-theme.css';
+
+// Feature #8: Theme management
+const AVAILABLE_THEMES = [
+  { id: 'royal-theme', name: 'Royal Gold', description: 'Elegant gold & dark', icon: '👑' },
+  { id: 'modern-dark', name: 'Modern Dark', description: 'Sleek blue accents', icon: '🌙' },
+  { id: 'netflix-red', name: 'Netflix Red', description: 'Bold streaming style', icon: '🎬' },
+  { id: 'minimal-light', name: 'Minimal Light', description: 'Clean & airy', icon: '☀️' }
+];
+
+const THEME_STORAGE_KEY = 'streamnexus_active_theme';
+
+function getActiveTheme() {
+  return localStorage.getItem(THEME_STORAGE_KEY) || 'royal-theme';
+}
+
+function setActiveTheme(themeId) {
+  localStorage.setItem(THEME_STORAGE_KEY, themeId);
+}
 
 function ProfileList({ items, emptyText, allowRemove, forceRender }) {
   if (!items || items.length === 0) return <p className="empty-state">{emptyText}</p>;
@@ -231,6 +249,45 @@ export default function ProfilePage() {
           <ProfileList items={history} emptyText="No watch history." forceRender={forceRender} />
         </section>
       )}
+
+      {/* Feature #8: Theme Picker Section */}
+      <section style={{ marginTop: '3rem', borderTop: '1px solid var(--border-color)', paddingTop: '2rem' }}>
+        <h2 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '0.5rem' }}>🎨Appearance</h2>
+        <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>Choose your preferred theme</p>
+        
+        <div className="theme-picker-grid">
+          {AVAILABLE_THEMES.map((theme) => {
+            const isActive = getActiveTheme() === theme.id;
+            return (
+              <div
+                key={theme.id}
+                className={`theme-option ${isActive ? 'is-active' : ''}`}
+                onClick={() => {
+                  setActiveTheme(theme.id);
+                  forceRender();
+                  window.dispatchEvent(new CustomEvent('theme-changed', { detail: { themeId: theme.id } }));
+                }}
+                role="button"
+                tabIndex={0}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setActiveTheme(theme.id);
+                    forceRender();
+                    window.dispatchEvent(new CustomEvent('theme-changed', { detail: { themeId: theme.id } }));
+                  }
+                }}
+              >
+                <div className="theme-preview" style={{ background: theme.id === 'minimal-light' ? '#f8f9fa' : '#1a1a1a', border: theme.id === 'minimal-light' ? '1px solid #dee2e6' : '1px solid #333' }}>
+                  <span>{theme.icon}</span>
+                </div>
+                <div className="theme-name">{theme.name}</div>
+                <div className="theme-description">{theme.description}</div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
     </main>
   );
 }

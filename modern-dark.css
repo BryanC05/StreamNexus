@@ -1,0 +1,399 @@
+/* Modern Dark Theme - StreamNexus */
+/* Sleek, contemporary dark interface with blue accents */
+
+:root {
+  --bg-primary: #0a0e17;
+  --bg-secondary: #111827;
+  --bg-tertiary: #1f2937;
+  --text-primary: #f9fafb;
+  --text-secondary: #d1d5db;
+  --text-dim: #9ca3af;
+  
+  /* Accent colors */
+  --accent-blue: #3b82f6;
+  --accent-blue-hover: #2563eb;
+  --accent-cyan: #06b6d4;
+  --accent-purple: #8b5cf6;
+  
+  /* UI elements */
+  --border-color: #374151;
+  --border-light: #4b5563;
+  --shadow-color: rgba(0, 0, 0, 0.4);
+  --overlay-bg: rgba(17, 24, 39, 0.95);
+  
+  /* Status colors */
+  --success-color: #10b981;
+  --warning-color: #f59e0b;
+  --error-color: #ef4444;
+  --info-color: #3b82f6;
+  
+  /* Card backgrounds */
+  --card-bg: rgba(31, 41, 55, 0.6);
+  --card-hover: rgba(31, 41, 55, 0.9);
+  
+  /* Gradient backgrounds */
+  --gradient-primary: linear-gradient(135deg, #0a0e17 0%, #111827 100%);
+  --gradient-accent: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  --gradient-hero: linear-gradient(180deg, rgba(10,14,23,0.3) 0%, rgba(10,14,23,1) 100%);
+}
+
+/* Base styles */
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* Header and Navigation */
+.page-header {
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.header-actions button {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.header-actions button:hover {
+  background: var(--border-light);
+  border-color: var(--accent-blue);
+}
+
+/* Buttons */
+.primary-button, .primary-link {
+  background: var(--gradient-accent);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);
+}
+
+.primary-button:hover, .primary-link:hover {
+  box-shadow: 0 6px 8px -1px rgba(59, 130, 246, 0.4);
+  transform: translateY(-1px);
+}
+
+.secondary-button {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.secondary-button:hover {
+  border-color: var(--accent-blue);
+  color: var(--text-primary);
+}
+
+.secondary-button.is-active {
+  background: var(--accent-blue);
+  border-color: var(--accent-blue);
+  color: white;
+}
+
+/* Cards and Posters */
+.poster-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.poster-card:hover {
+  background: var(--card-hover);
+  border-color: var(--accent-blue);
+  transform: translateY(-4px);
+  box-shadow: 0 10px 15px -3px var(--shadow-color);
+}
+
+/* Input Fields */
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="search"],
+textarea,
+select {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  outline: none;
+}
+
+/* Genre Tags */
+.genre-tag {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.genre-tag:hover {
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+}
+
+/* Stats and Tiles */
+.stat-tile {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.stat-tile.is-active {
+  border-color: var(--accent-blue);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+/* Progress Bars */
+progress {
+  background: var(--bg-tertiary);
+}
+
+progress::-webkit-progress-bar {
+  background: var(--bg-tertiary);
+}
+
+progress::-webkit-progress-value {
+  background: var(--gradient-accent);
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-light);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-blue);
+}
+
+/* Modal and Dialog */
+.modal-content,
+.dialog-content {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 20px 25px -5px var(--shadow-color);
+}
+
+/* Toast Notifications */
+.toast {
+  background: var(--bg-tertiary);
+  border-left: 4px solid var(--accent-blue);
+  color: var(--text-primary);
+  box-shadow: 0 10px 15px -3px var(--shadow-color);
+}
+
+.toast.success { border-left-color: var(--success-color); }
+.toast.error { border-left-color: var(--error-color); }
+.toast.warning { border-left-color: var(--warning-color); }
+.toast.info { border-left-color: var(--info-color); }
+
+/* Links */
+a {
+  color: var(--accent-cyan);
+}
+
+a:hover {
+  color: var(--accent-blue);
+}
+
+/* Selected / Active States */
+.isSelected, .is-selected {
+  border-color: var(--accent-blue) !important;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+/* Episode Cards */
+.episode-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+}
+
+.episode-card:hover {
+  border-color: var(--accent-cyan);
+  background: var(--card-hover);
+}
+
+/* Reviews */
+.review-card {
+  background: var(--card-bg);
+  border-left: 3px solid var(--accent-cyan);
+}
+
+/* Lights Out Mode Overlay */
+.lights-out-overlay {
+  background: rgba(0, 0, 0, 0.95);
+}
+
+/* Selection Page */
+.selection-page {
+  background: var(--gradient-primary);
+}
+
+/* Profile Page */
+.profile-shell {
+  background: var(--gradient-primary);
+}
+
+.profile-item {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+}
+
+.profile-item:hover {
+  border-color: var(--accent-blue);
+}
+
+/* Footer */
+footer {
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  color: var(--text-dim);
+}
+
+/* Hero Section */
+.hero-section {
+  background: var(--gradient-hero);
+}
+
+/* Loading States */
+.loading-skeleton {
+  background: linear-gradient(90deg, var(--bg-tertiary) 25%, var(--bg-secondary) 50%, var(--bg-tertiary) 75%);
+}
+
+/* Tooltips */
+.tooltip {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+/* Badges */
+.badge {
+  background: var(--bg-tertiary);
+  color: var(--accent-cyan);
+  border: 1px solid var(--accent-cyan);
+}
+
+.badge.gold {
+  background: rgba(212, 175, 55, 0.1);
+  color: #d4af37;
+  border-color: #d4af37;
+}
+
+/* Horizontal Scroll Rows */
+.horizontal-scroll-row::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+/* Video Player Controls */
+.video-controls {
+  background: linear-gradient(180deg, rgba(0,0,0,0) 0%, var(--bg-secondary) 100%);
+}
+
+.video-progress-bar {
+  background: var(--border-color);
+}
+
+.video-progress-bar-filled {
+  background: var(--accent-blue);
+}
+
+/* Search Bar */
+.search-bar {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+}
+
+.search-bar:focus-within {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Dropdown */
+.dropdown-menu {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 10px 15px -3px var(--shadow-color);
+}
+
+.dropdown-item {
+  color: var(--text-secondary);
+}
+
+.dropdown-item:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.dropdown-item.active {
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--accent-blue);
+}
+
+/* Theme Picker Specific */
+.theme-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.theme-option {
+  background: var(--card-bg);
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.theme-option:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent-blue);
+  box-shadow: 0 8px 12px -2px var(--shadow-color);
+}
+
+.theme-option.is-active {
+  border-color: var(--accent-blue);
+  background: rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.theme-preview {
+  height: 80px;
+  border-radius: 8px;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+}
+
+.theme-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.theme-description {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin-top: 0.25rem;
+}
