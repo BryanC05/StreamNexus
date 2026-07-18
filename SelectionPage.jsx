@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   DEFAULT_TMDB_KEY, getCachedCatalog, getActiveCatalog, catalog,
   formatTvTotals, fetchPopularCatalog, TMDB_CACHE_KEY, isFavorite, toggleFavorite,
-  fetchTvStats, getSavedProgress, searchTmdb, getUsername, isLoggedIn
+  fetchTvStats, getSavedProgress, searchTmdb, getUsername, isLoggedIn, getHistory
 } from './app.js';
 import './royal-theme.css';
 
@@ -174,7 +174,13 @@ export default function SelectionPage() {
   const [selectedGenre, setSelectedGenre] = useState('');
   const [filterYear, setFilterYear] = useState('');
   const [selectedSort, setSelectedSort] = useState('popular');
+  const [recentlyWatched, setRecentlyWatched] = useState([]);
   const forceRender = () => setRenderTrigger(prev => prev + 1);
+
+  useEffect(() => {
+    const history = getHistory();
+    setRecentlyWatched(history.slice(0, 10));
+  }, []);
 
   useEffect(() => {
     const loadRemote = async () => {
@@ -268,6 +274,10 @@ export default function SelectionPage() {
     items = [...items].sort((a, b) => String(a.title || '').localeCompare(String(b.title || '')));
   } else if (selectedSort === 'alpha-desc') {
     items = [...items].sort((a, b) => String(b.title || '').localeCompare(String(a.title || '')));
+  } else if (selectedSort === 'rating-desc') {
+    items = [...items].sort((a, b) => (b.vote_average || b.rating || 0) - (a.vote_average || a.rating || 0));
+  } else if (selectedSort === 'rating-asc') {
+    items = [...items].sort((a, b) => (a.vote_average || a.rating || 0) - (b.vote_average || b.rating || 0));
   }
   
   const displayedItems = items.slice(0, displayLimit);
@@ -374,6 +384,8 @@ export default function SelectionPage() {
                 style={{ width: '100%', minHeight: '40px', padding: '0 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--panel)', color: 'var(--text)' }}
               >
                 <option value="popular">Popularity</option>
+                <option value="rating-desc">Highest Rated</option>
+                <option value="rating-asc">Lowest Rated</option>
                 <option value="year-desc">Year (Newest First)</option>
                 <option value="year-asc">Year (Oldest First)</option>
                 <option value="alpha-asc">Title (A-Z)</option>
@@ -406,6 +418,9 @@ export default function SelectionPage() {
           </>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', marginTop: '1rem' }}>
+            {recentlyWatched.length > 0 && (
+              <GenreRow title="Recently Watched" items={recentlyWatched} forceRender={forceRender} />
+            )}
             <GenreRow title="Trending Hits" items={items} forceRender={forceRender} />
             {ALL_GENRES.map(genre => (
               <GenreRow 
