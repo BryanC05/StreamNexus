@@ -37,3 +37,29 @@
 - **Intersection Observers**: Lazy-loads TV show stats (Seasons/Episodes count) only when the posters scroll into view to conserve bandwidth.
 - **Dynamic Auto-Healing**: Automatically self-heals corrupted watch times or invalid configuration states in local storage.
 - **Environment Variables**: Clean separation of API keys (TMDB, SubDL) using an external `env.js` configuration file.
+
+## 🎹 Keyboard Shortcuts (Feature #6)
+- **Space**: Play/Pause video playback
+- **F**: Toggle fullscreen mode
+- **M**: Mute/Unmute audio
+- **Arrow Left/Right**: Seek backward/forward 10 seconds
+- **Arrow Up/Down**: Increase/decrease volume
+- **Escape**: Exit lights-out mode
+- *Shortcuts disabled when typing in input fields*
+
+## 🎨 Theme Customization (Feature #8)
+- **4 Distinct Themes**:
+  - Royal Gold (default) - Elegant gold & dark aesthetic
+  - Modern Dark - Sleek contemporary dark with blue accents
+  - Netflix Red - Bold streaming service style
+  - Minimal Light - Clean, airy light interface
+- **Theme Selector**: Visual theme picker in Profile page with live previews
+- **Persistent Preference**: Selected theme saved to localStorage
+- **Dynamic Loading**: Theme CSS loaded before React renders for instant application
+
+## 🎯 Personalized Recommendations (Feature #11)
+- **Genre Analysis**: Analyzes watch history to identify top 3 preferred genres
+- **Smart Discovery**: Fetches TMDB recommendations based on favorite genres
+- **Duplicate Prevention**: Excludes already-watched content from recommendations
+- **"Because You Watched" Row**: Dedicated carousel on SelectionPage showing personalized picks
+- **Fallback Logic**: Fills with popular items when insufficient watch history exists
