@@ -180,7 +180,7 @@ export default function SelectionPage() {
   const [recentlyWatched, setRecentlyWatched] = useState([]);
   const forceRender = () => setRenderTrigger(prev => prev + 1);
 
-  // Feature #1: Load recently watched on mount
+  // Feature #1: Load recently watched on mount (deployed 2026-07-18T16:40:00Z)
   useEffect(() => {
     const history = getHistory();
     setRecentlyWatched(history.slice(0, 12));

@@ -3,12 +3,23 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>FreeVid App</title>
-    <script type="module" crossorigin src="/assets/index-CGo-VMpA.js"></script>
+    <title>FreeVid App</title>
+    <!-- Feature #8: Dynamic theme loading -->
+    <script>
+      // Load saved theme before React renders
+      (function() {
+        const savedTheme = localStorage.getItem('streamnexus_active_theme') || 'royal-theme';
+        const themeLink = document.getElementById('theme-stylesheet');
+        if (savedTheme !== 'royal-theme' && themeLink) {
+          themeLink.href = `/${savedTheme}.css`;
+        }
+      })();
+    </script>
+    <script type="module" crossorigin src="/assets/index-Bzy044s7.js"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-BXQ3s98W.css">
   </head>
   <body>
     <div id="root"></div>
-    <script src="/env.js"></script>
+    <script src="/env.js"></script>
   </body>
 </html>
