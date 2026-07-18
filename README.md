@@ -11,6 +11,9 @@ A React-based streaming content discovery platform. Browse movies and TV shows f
 - **Smart Subtitles** — Auto-fetch, extract, and convert subtitles via SubDL
 - **User Profile** — Continue Watching, Favorites, Watch History, Watch Time (all in `localStorage`)
 - **Privacy-First** — No data leaves your browser; one-click data clear in Profile settings
+- **Keyboard Shortcuts** — Space (play/pause), F (fullscreen), M (mute), Arrow keys (seek/volume)
+- **Theme Customization** — Choose from 4 UI themes: Royal Gold, Modern Dark, Netflix Red, Minimal Light
+- **Personalized Recommendations** — "Because You Watched" suggestions based on your viewing history
 
 ## Getting Started
 

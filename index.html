@@ -5,7 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>FreeVid App</title>
     <link rel="stylesheet" href="/styles.css">
-    <link rel="stylesheet" href="/royal-theme.css">
+    <!-- Feature #8: Dynamic theme loading -->
+    <link rel="stylesheet" id="theme-stylesheet" href="/royal-theme.css">
+    <script>
+      // Load saved theme before React renders
+      (function() {
+        const savedTheme = localStorage.getItem('streamnexus_active_theme') || 'royal-theme';
+        const themeLink = document.getElementById('theme-stylesheet');
+        if (savedTheme !== 'royal-theme' && themeLink) {
+          themeLink.href = `/${savedTheme}.css`;
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

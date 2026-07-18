@@ -638,6 +638,112 @@ export default function PlayerPage() {
     return () => window.removeEventListener('keydown', handleEsc);
   }, [lightsOut]);
 
+  // Feature #6: Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Ignore keyboard shortcuts when user is typing in an input field
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+        return;
+      }
+
+      // Space - Play/Pause
+      if (e.code === 'Space') {
+        e.preventDefault();
+        const video = videoRef.current;
+        if (video) {
+          if (video.paused) {
+            video.play();
+            showToast('Playing', 'info', 1000);
+          } else {
+            video.pause();
+            showToast('Paused', 'info', 1000);
+          }
+        } else {
+          // For iframe players, send message to iframe
+          const iframe = document.querySelector('.player-iframe');
+          if (iframe) {
+            iframe.contentWindow.postMessage({ type: 'KEYBOARD_EVENT', key: 'Space' }, '*');
+          }
+        }
+      }
+
+      // F - Fullscreen
+      if (e.code === 'KeyF') {
+        e.preventDefault();
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(err => {
+            console.warn(`Fullscreen error: ${err.message}`);
+          });
+          showToast('Fullscreen enabled', 'info', 1000);
+        } else {
+          document.exitFullscreen().catch(err => {
+            console.warn(`Exit fullscreen error: ${err.message}`);
+          });
+          showToast('Fullscreen disabled', 'info', 1000);
+        }
+      }
+
+      // M - Mute/Unmute
+      if (e.code === 'KeyM') {
+        e.preventDefault();
+        const video = videoRef.current;
+        if (video) {
+          video.muted = !video.muted;
+          showToast(video.muted ? 'Muted' : 'Unmuted', 'info', 1000);
+        } else {
+          // For iframe players
+          const iframe = document.querySelector('.player-iframe');
+          if (iframe) {
+            iframe.contentWindow.postMessage({ type: 'KEYBOARD_EVENT', key: 'M' }, '*');
+          }
+        }
+      }
+
+      // Arrow Left - Seek backward 10 seconds
+      if (e.code === 'ArrowLeft') {
+        e.preventDefault();
+        const video = videoRef.current;
+        if (video && !video.paused) {
+          video.currentTime = Math.max(0, video.currentTime - 10);
+          showToast('← Rewind 10s', 'info', 1000);
+        }
+      }
+
+      // Arrow Right - Seek forward 10 seconds
+      if (e.code === 'ArrowRight') {
+        e.preventDefault();
+        const video = videoRef.current;
+        if (video && !video.paused) {
+          video.currentTime = Math.min(video.duration, video.currentTime + 10);
+          showToast('Fast forward 10s →', 'info', 1000);
+        }
+      }
+
+      // Arrow Up - Increase volume
+      if (e.code === 'ArrowUp') {
+        e.preventDefault();
+        const video = videoRef.current;
+        if (video) {
+          video.volume = Math.min(1, video.volume + 0.1);
+          showToast(`Volume: ${Math.round(video.volume * 100)}%`, 'info', 1000);
+        }
+      }
+
+      // Arrow Down - Decrease volume
+      if (e.code === 'ArrowDown') {
+        e.preventDefault();
+        const video = videoRef.current;
+        if (video) {
+          video.volume = Math.max(0, video.volume - 0.1);
+          showToast(`Volume: ${Math.round(video.volume * 100)}%`, 'info', 1000);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showToast]);
+
   useEffect(() => {
     return () => {
       if (subtitleBlobUrl) URL.revokeObjectURL(subtitleBlobUrl);
