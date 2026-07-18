@@ -268,6 +268,10 @@ export default function SelectionPage() {
     items = [...items].sort((a, b) => String(a.title || '').localeCompare(String(b.title || '')));
   } else if (selectedSort === 'alpha-desc') {
     items = [...items].sort((a, b) => String(b.title || '').localeCompare(String(a.title || '')));
+  } else if (selectedSort === 'rating-desc') {
+    items = [...items].sort((a, b) => (b.vote_average || b.rating || 0) - (a.vote_average || a.rating || 0));
+  } else if (selectedSort === 'rating-asc') {
+    items = [...items].sort((a, b) => (a.vote_average || a.rating || 0) - (b.vote_average || b.rating || 0));
   }
   
   const displayedItems = items.slice(0, displayLimit);
@@ -378,6 +382,8 @@ export default function SelectionPage() {
                 <option value="year-asc">Year (Oldest First)</option>
                 <option value="alpha-asc">Title (A-Z)</option>
                 <option value="alpha-desc">Title (Z-A)</option>
+                <option value="rating-desc">Rating (Highest First)</option>
+                <option value="rating-asc">Rating (Lowest First)</option>
               </select>
             </div>
           </div>
