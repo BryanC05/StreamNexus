@@ -1,291 +1,271 @@
 import express from 'express';
 import cors from 'cors';
-import fs from 'fs';
-import path from 'path';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { getUser, saveUser, getReviews, saveReviews, persistenceMode } from './storage.js';
+import { mergeSyncData } from './lib/sync.js';
+import {
+  normalizeUsername,
+  isValidUsername,
+  validatePassword,
+  sanitizeSyncPayload,
+  validateReviewInput,
+  normalizeTmdbId,
+} from './lib/validate.js';
 
 const app = express();
 const PORT = process.env.PORT || 5001;
-const DB_FILE = process.env.VERCEL === '1'
-  ? path.join('/tmp', 'database.json')
-  : path.join(__dirname, 'database.json');
-const JWT_SECRET = process.env.JWT_SECRET || 'streamnexus_secret_key_1337';
+const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+const JWT_SECRET = process.env.JWT_SECRET || (isProduction ? '' : 'streamnexus_local_dev_only_secret');
 
-app.use(cors());
-app.use(express.json());
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET must be set in production');
+}
+if (!isProduction && !process.env.JWT_SECRET) {
+  console.warn('[server] Using an insecure development JWT secret. Set JWT_SECRET to avoid this warning.');
+}
+if (isProduction && persistenceMode === 'file') {
+  console.warn(
+    '[server] No KV store configured. Data written to the local filesystem will not survive cold starts. Set KV_REST_API_URL/KV_REST_API_TOKEN.'
+  );
+}
 
-// Initialize file database
-function getDb() {
-  if (!fs.existsSync(DB_FILE)) {
-    if (process.env.VERCEL === '1') {
-      const originalDbFile = path.join(__dirname, 'database.json');
-      if (fs.existsSync(originalDbFile)) {
-        try {
-          const content = fs.readFileSync(originalDbFile, 'utf-8');
-          fs.writeFileSync(DB_FILE, content);
-        } catch (err) {
-          console.error('Failed to copy database file to /tmp:', err);
-          fs.writeFileSync(DB_FILE, JSON.stringify({ users: {} }, null, 2));
-        }
-      } else {
-        fs.writeFileSync(DB_FILE, JSON.stringify({ users: {} }, null, 2));
-      }
-    } else {
-      fs.writeFileSync(DB_FILE, JSON.stringify({ users: {} }, null, 2));
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
+  .split(',')
+  .map(origin => origin.trim())
+  .filter(Boolean);
+
+app.set('trust proxy', 1);
+app.disable('x-powered-by');
+app.use(cors(allowedOrigins.length ? { origin: allowedOrigins } : { origin: false }));
+app.use(express.json({ limit: '200kb' }));
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Cache-Control', 'no-store');
+  next();
+});
+
+function rateLimit({ windowMs, max, message }) {
+  const buckets = new Map();
+  const cleanup = setInterval(() => {
+    const now = Date.now();
+    for (const [key, bucket] of buckets) {
+      if (bucket.reset <= now) buckets.delete(key);
     }
-  }
-  try {
-    return JSON.parse(fs.readFileSync(DB_FILE, 'utf-8'));
-  } catch (err) {
-    console.error('Error reading database file, resetting:', err);
-    const emptyDb = { users: {} };
-    fs.writeFileSync(DB_FILE, JSON.stringify(emptyDb, null, 2));
-    return emptyDb;
-  }
+  }, windowMs);
+  cleanup.unref?.();
+
+  return (req, res, next) => {
+    const now = Date.now();
+    const key = req.ip || 'unknown';
+    let bucket = buckets.get(key);
+    if (!bucket || bucket.reset <= now) {
+      bucket = { count: 0, reset: now + windowMs };
+      buckets.set(key, bucket);
+    }
+    bucket.count += 1;
+    if (bucket.count > max) {
+      res.setHeader('Retry-After', String(Math.ceil((bucket.reset - now) / 1000)));
+      return res.status(429).json({ error: message });
+    }
+    return next();
+  };
 }
 
-function saveDb(db) {
-  fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
-}
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: 'Too many authentication attempts. Please try again later.',
+});
+const reviewLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 30,
+  message: 'Too many review submissions. Please try again later.',
+});
 
-// Auth Middleware
 function authenticateToken(req, res, next) {
-  const authHeader = req.headers['authorization'];
+  const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.split(' ')[1];
-  
+
   if (!token) return res.status(401).json({ error: 'Access token required' });
-  
+
   jwt.verify(token, JWT_SECRET, (err, decoded) => {
-    if (err) return res.status(403).json({ error: 'Invalid or expired token' });
+    if (err || !decoded || typeof decoded.username !== 'string') {
+      return res.status(403).json({ error: 'Invalid or expired token' });
+    }
     req.username = decoded.username;
-    next();
+    return next();
   });
 }
 
-// --- API ROUTES ---
+function signToken(username) {
+  return jwt.sign({ username }, JWT_SECRET, { expiresIn: '7d' });
+}
 
-// Registration
-app.post('/api/auth/register', (req, res) => {
-  const { username, password } = req.body;
+function publicUser(user) {
+  return {
+    favorites: user.favorites || [],
+    history: user.history || [],
+    progress: user.progress || {},
+    watchTime: user.watchTime || 0,
+    deleted: user.deleted || {},
+    historyClearedAt: user.historyClearedAt || 0,
+  };
+}
+
+// --- AUTH ---
+
+app.use('/api/auth', authLimiter);
+
+app.post('/api/auth/register', async (req, res) => {
+  const { password } = req.body || {};
+  const username = normalizeUsername(req.body?.username);
+
   if (!username || !password) {
     return res.status(400).json({ error: 'Username and password required' });
   }
-  
-  const cleanUsername = username.trim().toLowerCase();
-  if (cleanUsername.length < 3) {
-    return res.status(400).json({ error: 'Username must be at least 3 characters' });
+  if (!isValidUsername(username)) {
+    return res.status(400).json({
+      error: 'Username must be 3-24 characters using lowercase letters, numbers, or underscores',
+    });
   }
-  if (password.length < 4) {
-    return res.status(400).json({ error: 'Password must be at least 4 characters' });
-  }
+  const passwordError = validatePassword(password);
+  if (passwordError) return res.status(400).json({ error: passwordError });
 
-  const db = getDb();
-  if (db.users[cleanUsername]) {
+  if (await getUser(username)) {
     return res.status(400).json({ error: 'Username is already taken' });
   }
 
-  const salt = bcrypt.genSaltSync(10);
-  const passwordHash = bcrypt.hashSync(password, salt);
-
-  db.users[cleanUsername] = {
-    username: username.trim(),
+  const passwordHash = await bcrypt.hash(password, 10);
+  const user = {
+    username,
     passwordHash,
     favorites: [],
     history: [],
     progress: {},
     watchTime: 0,
-    createdAt: new Date().toISOString()
+    deleted: {},
+    historyClearedAt: 0,
+    createdAt: new Date().toISOString(),
   };
+  await saveUser(username, user);
 
-  saveDb(db);
-
-  const token = jwt.sign({ username: cleanUsername }, JWT_SECRET, { expiresIn: '7d' });
-  res.json({ token, username: username.trim() });
+  return res.json({ token: signToken(username), username });
 });
 
-// Login
-app.post('/api/auth/login', (req, res) => {
-  const { username, password } = req.body;
+app.post('/api/auth/login', async (req, res) => {
+  const { password } = req.body || {};
+  const username = normalizeUsername(req.body?.username);
+
   if (!username || !password) {
     return res.status(400).json({ error: 'Username and password required' });
   }
 
-  const cleanUsername = username.trim().toLowerCase();
-  const db = getDb();
-  const user = db.users[cleanUsername];
-
-  if (!user || !bcrypt.compareSync(password, user.passwordHash)) {
+  const user = await getUser(username);
+  const passwordMatches = user ? await bcrypt.compare(String(password), user.passwordHash) : false;
+  if (!user || !passwordMatches) {
     return res.status(400).json({ error: 'Invalid username or password' });
   }
 
-  const token = jwt.sign({ username: cleanUsername }, JWT_SECRET, { expiresIn: '7d' });
-  res.json({ token, username: user.username });
+  return res.json({ token: signToken(username), username: user.username || username });
 });
 
-// Verify token
-app.get('/api/auth/verify', authenticateToken, (req, res) => {
-  const db = getDb();
-  const user = db.users[req.username];
+app.get('/api/auth/verify', authenticateToken, async (req, res) => {
+  const user = await getUser(req.username);
   if (!user) return res.status(404).json({ error: 'User not found' });
-  res.json({ username: user.username });
+  return res.json({ username: user.username || req.username });
 });
 
-// Cloud Sync - Fetch Data
-app.get('/api/user/sync', authenticateToken, (req, res) => {
-  const db = getDb();
-  const user = db.users[req.username];
+// --- CLOUD SYNC ---
+
+app.get('/api/user/sync', authenticateToken, async (req, res) => {
+  const user = await getUser(req.username);
   if (!user) return res.status(404).json({ error: 'User not found' });
-
-  res.json({
-    favorites: user.favorites || [],
-    history: user.history || [],
-    progress: user.progress || {},
-    watchTime: user.watchTime || 0
-  });
+  return res.json(publicUser(user));
 });
 
-// Helper to get unique identifier for movies/episodes
-function getContentKey(entry) {
-  if (entry.mediaType === 'tv') {
-    return `tv:${entry.id}:s${entry.season || 1}:e${entry.episode || 1}`;
-  }
-  return `movie:${entry.id}`;
-}
-
-// Cloud Sync - Merge & Save Data
-app.post('/api/user/sync', authenticateToken, (req, res) => {
-  const { favorites = [], history = [], progress = {}, watchTime = 0 } = req.body;
-  const db = getDb();
-  const user = db.users[req.username];
+app.post('/api/user/sync', authenticateToken, async (req, res) => {
+  const user = await getUser(req.username);
   if (!user) return res.status(404).json({ error: 'User not found' });
 
-  // 1. Merge Favorites (unique by mediaType + ID)
-  const mergedFavsMap = new Map();
-  // Add server favorites first
-  (user.favorites || []).forEach(item => {
-    mergedFavsMap.set(getContentKey(item), item);
-  });
-  // Add client favorites (overwriting or appending)
-  favorites.forEach(item => {
-    mergedFavsMap.set(getContentKey(item), item);
-  });
-  user.favorites = Array.from(mergedFavsMap.values());
+  const incoming = sanitizeSyncPayload(req.body);
+  const merged = mergeSyncData(user, incoming);
+  Object.assign(user, merged);
+  await saveUser(req.username, user);
 
-  // 2. Merge Progress (keep the one with the latest updatedAt timestamp)
-  const mergedProgress = { ...(user.progress || {}) };
-  Object.keys(progress).forEach(key => {
-    const clientItem = progress[key];
-    const serverItem = mergedProgress[key];
-    if (!serverItem || (clientItem.updatedAt || 0) > (serverItem.updatedAt || 0)) {
-      mergedProgress[key] = clientItem;
-    }
-  });
-  user.progress = mergedProgress;
-
-  // 3. Merge History (merge based on watchedAt time)
-  const mergedHistoryMap = new Map();
-  (user.history || []).forEach(item => {
-    mergedHistoryMap.set(getContentKey(item), item);
-  });
-  history.forEach(item => {
-    const existing = mergedHistoryMap.get(getContentKey(item));
-    if (!existing || (item.watchedAt || 0) > (existing.watchedAt || 0)) {
-      mergedHistoryMap.set(getContentKey(item), item);
-    }
-  });
-  user.history = Array.from(mergedHistoryMap.values())
-    .sort((a, b) => (b.watchedAt || 0) - (a.watchedAt || 0))
-    .slice(0, 80);
-
-  // 4. Merge Watch Time (take the maximum of both to avoid losing progress)
-  user.watchTime = Math.max(user.watchTime || 0, watchTime || 0);
-
-  saveDb(db);
-
-  res.json({
-    favorites: user.favorites,
-    history: user.history,
-    progress: user.progress,
-    watchTime: user.watchTime
-  });
+  return res.json(merged);
 });
 
-// Clear user data on cloud
-app.post('/api/user/clear', authenticateToken, (req, res) => {
-  const db = getDb();
-  const user = db.users[req.username];
+app.post('/api/user/clear', authenticateToken, async (req, res) => {
+  const user = await getUser(req.username);
   if (!user) return res.status(404).json({ error: 'User not found' });
 
   user.favorites = [];
   user.history = [];
   user.progress = {};
   user.watchTime = 0;
+  user.deleted = {};
+  user.historyClearedAt = Date.now();
+  await saveUser(req.username, user);
 
-  saveDb(db);
-  res.json({ success: true });
+  return res.json({ success: true, historyClearedAt: user.historyClearedAt });
 });
 
-// --- RATING & REVIEWS ---
+// --- REVIEWS ---
 
-// Get reviews for a title
-app.get('/api/reviews', (req, res) => {
-  const { mediaType, tmdbId } = req.query;
-  if (!mediaType || !tmdbId) {
-    return res.status(400).json({ error: 'mediaType and tmdbId are required' });
+app.get('/api/reviews', async (req, res) => {
+  const mediaType = req.query.mediaType;
+  const tmdbId = normalizeTmdbId(req.query.tmdbId);
+  if ((mediaType !== 'movie' && mediaType !== 'tv') || !tmdbId) {
+    return res.status(400).json({ error: 'A valid mediaType and tmdbId are required' });
   }
-
-  const db = getDb();
-  if (!db.reviews) db.reviews = {};
-
-  const key = `${mediaType}:${tmdbId}`;
-  res.json(db.reviews[key] || []);
+  return res.json(await getReviews(`${mediaType}:${tmdbId}`));
 });
 
-// Add a review
-app.post('/api/reviews', authenticateToken, (req, res) => {
-  const { mediaType, tmdbId, rating, text } = req.body;
-  if (!mediaType || !tmdbId || rating === undefined) {
-    return res.status(400).json({ error: 'mediaType, tmdbId, and rating are required' });
-  }
+app.post('/api/reviews', reviewLimiter, authenticateToken, async (req, res) => {
+  const input = validateReviewInput(req.body);
+  if (input.error) return res.status(400).json({ error: input.error });
 
-  const numericRating = Number(rating);
-  if (isNaN(numericRating) || numericRating < 1 || numericRating > 5) {
-    return res.status(400).json({ error: 'Rating must be a number between 1 and 5' });
-  }
+  const user = await getUser(req.username);
+  if (!user) return res.status(404).json({ error: 'User not found' });
 
-  const db = getDb();
-  if (!db.reviews) db.reviews = {};
-
-  const key = `${mediaType}:${tmdbId}`;
-  if (!db.reviews[key]) db.reviews[key] = [];
-
-  const existingIdx = db.reviews[key].findIndex(r => r.username.toLowerCase() === req.username.toLowerCase());
-  
-  const newReview = {
-    username: db.users[req.username]?.username || req.username,
-    rating: numericRating,
-    text: (text || '').trim(),
-    createdAt: new Date().toISOString()
+  const reviewKey = `${input.mediaType}:${input.tmdbId}`;
+  const reviews = await getReviews(reviewKey);
+  const review = {
+    username: user.username || req.username,
+    rating: input.rating,
+    text: input.text,
+    createdAt: new Date().toISOString(),
   };
 
-  if (existingIdx !== -1) {
-    db.reviews[key][existingIdx] = newReview;
+  const existingIndex = reviews.findIndex(
+    item => typeof item.username === 'string' && item.username.toLowerCase() === req.username
+  );
+  if (existingIndex !== -1) {
+    reviews[existingIndex] = review;
   } else {
-    db.reviews[key].push(newReview);
+    reviews.push(review);
   }
 
-  saveDb(db);
-  res.json({ success: true, reviews: db.reviews[key] });
+  await saveReviews(reviewKey, reviews);
+  return res.json({ success: true, reviews });
+});
+
+app.use((req, res) => res.status(404).json({ error: 'Not found' }));
+
+app.use((err, req, res, next) => {
+  if (res.headersSent) return next(err);
+  if (err?.type === 'entity.parse.failed') {
+    return res.status(400).json({ error: 'Invalid JSON body' });
+  }
+  console.error('[server] Unhandled error:', err);
+  return res.status(500).json({ error: 'Internal server error' });
 });
 
 if (process.env.VERCEL !== '1') {
   app.listen(PORT, () => {
-    console.log(`StreamNexus Auth & Sync Server running on port ${PORT}`);
+    console.log(`StreamNexus Auth & Sync Server running on port ${PORT} (${persistenceMode} storage)`);
   });
 }
 

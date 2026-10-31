@@ -1,0 +1,72 @@
+/* Air — midnight sky through glass sculpture.
+   The id stays `royal-theme` so saved theme choices keep working.
+   Component geometry lives in air.css; this file only supplies tokens. */
+:root {
+  color-scheme: dark;
+
+  --bg: #000000;
+  --bg-image: none;
+  --panel: #0b0b0b;
+  --panel-soft: #121212;
+  --panel-strong: #1b1b1b;
+  --border: rgba(255, 255, 255, 0.16);
+  --border-soft: rgba(255, 255, 255, 0.09);
+  --text: #ffffff;
+  --muted: rgba(255, 255, 255, 0.62);
+
+  --accent: #ffffff;
+  --accent-strong: #ffffff;
+  --accent-ink: #1b1b1b;
+  --accent-soft: rgba(255, 255, 255, 0.08);
+
+  --danger: #ff8d8d;
+  --danger-soft: rgba(255, 141, 141, 0.12);
+  --success: #7fe0a6;
+
+  /* Neutral glass: dark canvas, thin white borders, no tint. */
+  --chrome-bg: rgba(0, 0, 0, 0.46);
+  --chrome-bg-soft: rgba(255, 255, 255, 0.05);
+  --chrome-bg-strong: rgba(0, 0, 0, 0.74);
+  --chrome-border: rgba(255, 255, 255, 0.18);
+  --chrome-border-strong: rgba(255, 255, 255, 0.38);
+  --chrome-highlight: transparent;
+  --chrome-shadow: none;
+  --chrome-blur: blur(18px) saturate(130%);
+
+  --font-body: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-hero: 'Anton', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-accent: 'Caveat', 'Inter', ui-sans-serif, cursive;
+  --display-weight: 500;
+  --display-tracking: -0.02em;
+
+  --shadow-md: none;
+  --shadow-lg: none;
+
+  /* Canvas and Haze islands. */
+  --canvas-accent: #2b7fff;
+  --header-bg: rgba(0, 0, 0, 0.82);
+  --hero-scrim: rgba(0, 0, 0, 0.66);
+  --hero-em: color-mix(in srgb, #426188 55%, #ffffff);
+  --hero-ink: #ffffff;
+  --hero-muted: rgba(255, 255, 255, 0.72);
+  --hero-ring: rgba(255, 255, 255, 0.24);
+
+  --card-bg: #f5f5f5;
+  --card-hover-bg: #ffffff;
+  --card-ink: #1b1b1b;
+  --card-muted: #5d5d5d;
+  --card-line: rgba(27, 27, 27, 0.14);
+  --card-line-strong: rgba(27, 27, 27, 0.34);
+  --card-border: transparent;
+  --card-field-bg: #ffffff;
+  --card-link: #1b1b1b;
+  --card-link-underline: #2b7fff;
+
+  --media-bg: #111111;
+  --media-badge-bg: rgba(0, 0, 0, 0.55);
+  --media-badge-ink: #ffffff;
+  --media-badge-line: rgba(255, 255, 255, 0.14);
+  --media-favorite-bg: rgba(0, 0, 0, 0.55);
+  --media-favorite-ink: #ffffff;
+}

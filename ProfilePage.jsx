@@ -1,37 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import SiteHeader from './components/SiteHeader.jsx';
+import ThemePicker from './components/ThemePicker.jsx';
+import { ClockIcon, HeartIcon, StarIcon, TrashIcon, UserIcon } from './components/Icons.jsx';
+import { setActiveTheme, useActiveTheme } from './lib/theme.js';
 import {
-  getFavorites, getHistory, getProgressStore, getGlobalWatchTime,
+  getFavorites, getHistory, getGlobalWatchTime,
   formatDuration, formatDate, getTitleFromEntry, toggleFavorite,
-  FAVORITES_KEY, HISTORY_KEY, PROGRESS_KEY, WATCH_TIME_KEY,
+  FAVORITES_KEY, HISTORY_KEY, PROGRESS_KEY, WATCH_TIME_KEY, TOMBSTONES_KEY, HISTORY_CLEARED_KEY,
   getUsername, isLoggedIn, logout, apiRegister, apiLogin, apiClearCloud
 } from './app.js';
-import './royal-theme.css';
-
-// Feature #8: Theme management
-const AVAILABLE_THEMES = [
-  { id: 'royal-theme', name: 'Royal Gold', description: 'Elegant gold & dark', icon: '👑' },
-  { id: 'modern-dark', name: 'Modern Dark', description: 'Sleek blue accents', icon: '🌙' },
-  { id: 'netflix-red', name: 'Netflix Red', description: 'Bold streaming style', icon: '🎬' },
-  { id: 'minimal-light', name: 'Minimal Light', description: 'Clean & airy', icon: '☀️' }
-];
-
-const THEME_STORAGE_KEY = 'streamnexus_active_theme';
-
-function getActiveTheme() {
-  return localStorage.getItem(THEME_STORAGE_KEY) || 'royal-theme';
-}
-
-function setActiveTheme(themeId) {
-  localStorage.setItem(THEME_STORAGE_KEY, themeId);
-}
 
 function ProfileList({ items, emptyText, allowRemove, forceRender }) {
   if (!items || items.length === 0) return <p className="empty-state">{emptyText}</p>;
   return (
     <div className="profile-list">
       {items.map((item, idx) => {
-        const n = getTitleFromEntry({ ...item, mediaType: item.mediaType || "movie" });
+        const n = getTitleFromEntry({ ...item, mediaType: item.mediaType || 'movie' });
         const url = `/player?type=${n.mediaType}&id=${n.id}&title=${encodeURIComponent(n.title)}&season=${n.season}&episode=${n.episode}`;
         return (
           <article key={idx} className="profile-item">
@@ -39,10 +24,20 @@ function ProfileList({ items, emptyText, allowRemove, forceRender }) {
               <img src={n.poster} alt={n.title} loading="lazy" />
               <span className="profile-item-copy">
                 <strong>{n.title}</strong>
-                <span>{[n.mediaType === "tv" ? `S${n.season} E${n.episode}` : "Movie", n.year, formatDate(item.updatedAt || item.watchedAt)].filter(Boolean).join(" | ")}</span>
+                <span>
+                  {[
+                    n.mediaType === 'tv' ? `S${n.season} · E${n.episode}` : 'Movie',
+                    n.year,
+                    formatDate(item.updatedAt || item.watchedAt)
+                  ].filter(Boolean).join('  ·  ')}
+                </span>
               </span>
             </Link>
-            {allowRemove && <button className="secondary-button compact-button" onClick={() => { toggleFavorite(n); forceRender(); }}>Remove</button>}
+            {allowRemove && (
+              <button className="ghost-button danger compact-button" onClick={() => { toggleFavorite(n); forceRender(); }}>
+                <TrashIcon size={14} /> Remove
+              </button>
+            )}
           </article>
         );
       })}
@@ -51,19 +46,19 @@ function ProfileList({ items, emptyText, allowRemove, forceRender }) {
 }
 
 export default function ProfilePage() {
-  const navigate = useNavigate();
-  const [trigger, setTrigger] = useState(0);
+  const [, setTrigger] = useState(0);
   const forceRender = () => setTrigger(x => x + 1);
-  const [activeTab, setActiveTab] = useState('favorites'); // 'favorites' or 'history'
+  const [activeTab, setActiveTab] = useState('favorites');
+  const activeTheme = useActiveTheme();
 
-  const [authMode, setAuthMode] = useState('login'); // 'login' or 'register'
+  const [authMode, setAuthMode] = useState('login');
   const [usernameInput, setUsernameInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
 
-  const handleAuthSubmit = async (e) => {
-    e.preventDefault();
+  const handleAuthSubmit = async (event) => {
+    event.preventDefault();
     setAuthError('');
     setAuthLoading(true);
     try {
@@ -88,205 +83,208 @@ export default function ProfilePage() {
   };
 
   const clearData = async () => {
-    if (confirm("Are you sure you want to clear all data? This will also clear cloud sync data if logged in.")) {
-      if (isLoggedIn()) {
-        await apiClearCloud().catch(() => {});
-      }
-      [FAVORITES_KEY, HISTORY_KEY, PROGRESS_KEY, WATCH_TIME_KEY].forEach(k => localStorage.removeItem(k));
-      forceRender();
+    if (!confirm('Are you sure you want to clear all data? This will also clear cloud sync data if logged in.')) return;
+    if (isLoggedIn()) {
+      await apiClearCloud().catch(() => {});
     }
+    [FAVORITES_KEY, HISTORY_KEY, PROGRESS_KEY, WATCH_TIME_KEY, TOMBSTONES_KEY, HISTORY_CLEARED_KEY]
+      .forEach(key => localStorage.removeItem(key));
+    forceRender();
   };
 
-  // Auth Guard Screen
   if (!isLoggedIn()) {
     return (
-      <main className="profile-shell" onClick={() => navigate('/')} style={{ display: 'grid', placeItems: 'center', minHeight: '80vh' }}>
-        <article className="auth-parchment-scroll" onClick={(e) => e.stopPropagation()} style={{ display: 'block', width: '100%', maxWidth: '450px', padding: '2.5rem' }}>
-          <header style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <p className="eyebrow">StreamNexus Cinema</p>
-            <h1 className="auth-card-title">{authMode === 'login' ? 'Sign In' : 'Join Us'}</h1>
-            <p style={{ margin: '0.5rem 0 0', fontSize: '0.9rem', color: 'var(--text-dim)' }}>
-              Sync your watch history and favorites to the cloud.
-            </p>
-          </header>
-          
-          <form onSubmit={handleAuthSubmit} className="control-grid">
-            <label className="field">
-              <span>Username</span>
-              <input 
-                type="text" 
-                required 
-                placeholder="Enter username" 
-                value={usernameInput} 
-                onChange={e => setUsernameInput(e.target.value)} 
-              />
-            </label>
-            <label className="field">
-              <span>Password</span>
-              <input 
-                type="password" 
-                required 
-                placeholder="Enter password" 
-                value={passwordInput} 
-                onChange={e => setPasswordInput(e.target.value)} 
-              />
-            </label>
-            
-            {authError && (
-              <p style={{ color: '#ef4444', fontSize: '0.88rem', margin: '0', textAlign: 'center', fontWeight: '600' }}>
-                ⚠️ {authError}
+      <main className="profile-shell">
+        <SiteHeader />
+        <section className="auth-stage">
+          <article className="auth-card">
+            <header className="auth-card-head">
+              <span className="auth-badge"><UserIcon size={16} /></span>
+              <p className="eyebrow">StreamNexus Cinema</p>
+              <h1 className="auth-card-title">{authMode === 'login' ? 'Welcome back' : 'Create your account'}</h1>
+              <p className="auth-lede">
+                {authMode === 'login'
+                  ? 'Sign in to sync favorites, watch history and progress to the cloud.'
+                  : 'Pick a username and a password of at least 8 characters to start syncing.'}
               </p>
-            )}
-            
-            <button type="submit" className="primary-link" style={{ width: '100%', minHeight: '44px', marginTop: '0.5rem' }} disabled={authLoading}>
-              {authLoading ? 'Verifying...' : authMode === 'login' ? 'Sign In' : 'Register'}
-            </button>
-            
-            <div style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.9rem', color: 'var(--text-dim)' }}>
-              {authMode === 'login' ? "New to StreamNexus?" : "Already have an account?"}{' '}
-              <button 
-                type="button" 
-                onClick={() => { setAuthMode(authMode === 'login' ? 'register' : 'login'); setAuthError(''); }} 
-                style={{ background: 'none', border: 'none', color: 'var(--gold)', textDecoration: 'underline', padding: 0, minHeight: 'auto', display: 'inline', cursor: 'pointer' }}
-              >
-                {authMode === 'login' ? 'Create an account' : 'Sign in here'}
+            </header>
+
+            <form onSubmit={handleAuthSubmit} className="auth-form">
+              <label className="field">
+                <span>Username</span>
+                <input
+                  type="text"
+                  autoComplete="username"
+                  required
+                  placeholder="Enter username"
+                  value={usernameInput}
+                  onChange={e => setUsernameInput(e.target.value)}
+                />
+              </label>
+              <label className="field">
+                <span>Password</span>
+                <input
+                  type="password"
+                  autoComplete={authMode === 'login' ? 'current-password' : 'new-password'}
+                  minLength={8}
+                  required
+                  placeholder="At least 8 characters"
+                  value={passwordInput}
+                  onChange={e => setPasswordInput(e.target.value)}
+                />
+              </label>
+
+              {authError && <p className="form-error" role="alert">{authError}</p>}
+
+              <button type="submit" className="primary-button auth-submit" disabled={authLoading}>
+                {authLoading ? 'Verifying…' : authMode === 'login' ? 'Sign in' : 'Register'}
               </button>
-            </div>
-          </form>
-        </article>
+
+              <p className="auth-switch">
+                {authMode === 'login' ? 'New to StreamNexus?' : 'Already have an account?'}{' '}
+                <button
+                  type="button"
+                  onClick={() => { setAuthMode(authMode === 'login' ? 'register' : 'login'); setAuthError(''); }}
+                >
+                  {authMode === 'login' ? 'Create an account' : 'Sign in instead'}
+                </button>
+              </p>
+            </form>
+
+            <p className="auth-foot">No account needed to browse or use the player — sync is optional.</p>
+          </article>
+        </section>
       </main>
     );
   }
 
   const favorites = getFavorites();
   const history = getHistory();
-  const progressItems = Object.values(getProgressStore()).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  const username = getUsername();
 
   return (
     <main className="profile-shell">
-      <header className="page-header">
-        <div>
-          <p className="eyebrow" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <span>FreeVid</span>
-            <span style={{ fontSize: '0.75rem', background: 'rgba(212,175,55,0.12)', border: '1px solid var(--gold-border)', padding: '2px 8px', borderRadius: '12px', textTransform: 'none' }}>Cloud Synced ✓</span>
-          </p>
-          <h1>Profile</h1>
+      <SiteHeader
+        actions={(
+          <>
+            <button type="button" className="ghost-button" onClick={handleLogout}>Sign out</button>
+            <button type="button" className="ghost-button danger" onClick={clearData}>Clear data</button>
+          </>
+        )}
+      />
+
+      <section className="profile-hero">
+        <span className="profile-avatar" aria-hidden="true">{username.slice(0, 1).toUpperCase()}</span>
+        <div className="profile-identity">
+          <p className="eyebrow">Signed in <span className="sync-dot" aria-hidden="true" /> Cloud synced</p>
+          <h1>{username}</h1>
+          <p>Your favorites, history and watch time follow you across devices.</p>
         </div>
-        <div className="header-actions">
-          <Link className="secondary-button" to="/">Home</Link>
-          <span style={{ fontSize: '0.9rem', color: 'var(--gold-light)', fontWeight: 'bold', marginRight: '5px' }}>👤 {getUsername()}</span>
-          <button onClick={handleLogout} className="secondary-button">Sign Out</button>
-          <button onClick={clearData} className="secondary-button" style={{ borderColor: 'rgba(239, 68, 68, 0.4)' }}>Clear Data</button>
-        </div>
-      </header>
-      <section className="stats-grid">
-        <article className={`stat-tile ${activeTab === 'favorites' ? 'is-active' : ''}`} style={{ cursor: 'pointer' }} onClick={() => setActiveTab('favorites')}>
-          <span>{favorites.length}</span>
-          <p>Favorites</p>
-        </article>
-        <article className={`stat-tile ${activeTab === 'history' ? 'is-active' : ''}`} style={{ cursor: 'pointer' }} onClick={() => setActiveTab('history')}>
-          <span>{history.length}</span>
-          <p>History</p>
-        </article>
-        <article className="stat-tile"><span>{formatDuration(getGlobalWatchTime())}</span><p>Watch Time</p></article>
       </section>
 
-      <div className="profile-tabs" style={{ display: 'flex', gap: '12px', marginTop: '2rem', borderBottom: '1px solid var(--border-gold)', paddingBottom: '12px', marginBottom: '1.5rem' }}>
-        <button 
-          className={`secondary-button ${activeTab === 'favorites' ? 'is-active' : ''}`}
+      <section className="stats-grid">
+        <button
+          type="button"
+          className={`stat-tile ${activeTab === 'favorites' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('favorites')}
-          style={{ flex: 1, minWidth: '0' }}
+          aria-pressed={activeTab === 'favorites'}
         >
-          Favorites ({favorites.length})
+          <span className="stat-icon"><HeartIcon size={17} filled /></span>
+          <strong>{favorites.length}</strong>
+          <p>Favorites</p>
         </button>
-        <button 
-          className={`secondary-button ${activeTab === 'history' ? 'is-active' : ''}`}
+        <button
+          type="button"
+          className={`stat-tile ${activeTab === 'history' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('history')}
-          style={{ flex: 1, minWidth: '0' }}
+          aria-pressed={activeTab === 'history'}
         >
-          Watch History ({history.length})
+          <span className="stat-icon"><ClockIcon size={17} /></span>
+          <strong>{history.length}</strong>
+          <p>History</p>
         </button>
-      </div>
+        <article className="stat-tile stat-static">
+          <span className="stat-icon"><StarIcon size={17} /></span>
+          <strong>{formatDuration(getGlobalWatchTime())}</strong>
+          <p>Watch time</p>
+        </article>
+      </section>
 
-      {activeTab === 'favorites' ? (
-        <section className="profile-section" style={{ marginTop: '0' }}>
-          {favorites.length === 0 ? (
-            <p className="empty-state">No favorites.</p>
+      <section className="profile-collections">
+        <div className="collection-head">
+          <div className="segmented" role="tablist" aria-label="Collections">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'favorites'}
+              className={`toggle-chip ${activeTab === 'favorites' ? 'is-active' : ''}`}
+              onClick={() => setActiveTab('favorites')}
+            >
+              <HeartIcon size={14} /> Favorites <span className="count-pill">{favorites.length}</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'history'}
+              className={`toggle-chip ${activeTab === 'history' ? 'is-active' : ''}`}
+              onClick={() => setActiveTab('history')}
+            >
+              <ClockIcon size={14} /> History <span className="count-pill">{history.length}</span>
+            </button>
+          </div>
+        </div>
+
+        {activeTab === 'favorites' ? (
+          favorites.length === 0 ? (
+            <div className="empty-panel">
+              <p className="eyebrow">Nothing saved yet</p>
+              <h3>Your favorites will live here.</h3>
+              <p>Browse the catalog and tap the heart on anything you want to keep.</p>
+              <Link className="primary-button" to="/">Browse the catalog</Link>
+            </div>
           ) : (
             <div className="favorites-grid-5">
               {favorites.map((item, idx) => {
-                const n = getTitleFromEntry({ ...item, mediaType: item.mediaType || "movie" });
+                const n = getTitleFromEntry({ ...item, mediaType: item.mediaType || 'movie' });
                 const url = `/player?type=${n.mediaType}&id=${n.id}&title=${encodeURIComponent(n.title)}&season=${n.season}&episode=${n.episode}`;
                 return (
                   <article key={idx} className="poster-card">
                     <span className="poster-media">
                       <Link className="poster-image-link" to={url}>
-                        <img src={n.poster} alt={n.title} loading="lazy" style={{ width: '100%', aspectRatio: '2 / 3', objectFit: 'cover' }} />
+                        <img src={n.poster} alt={n.title} loading="lazy" />
                       </Link>
-                      <button 
-                        className="favorite-button is-active" 
-                        type="button" 
+                      <button
+                        className="favorite-button is-active"
+                        type="button"
                         onClick={() => { toggleFavorite(n); forceRender(); }}
-                        title="Remove Favorite"
+                        title="Remove from favorites"
                       >
-                        Remove
+                        <HeartIcon size={13} filled /> <span>Saved</span>
                       </button>
                     </span>
                     <Link className="poster-link" to={url}>
                       <span className="poster-copy">
-                        <strong style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.title}</strong>
-                        <span style={{ fontSize: '0.75rem' }}>{[n.mediaType === "tv" ? `TV Show` : "Movie", n.year].filter(Boolean).join(" \u00B7 ")}</span>
+                        <strong>{n.title}</strong>
+                        <span>{[n.mediaType === 'tv' ? 'Series' : 'Movie', n.year].filter(Boolean).join(' · ')}</span>
                       </span>
                     </Link>
                   </article>
                 );
               })}
             </div>
-          )}
-        </section>
-      ) : (
-        <section className="profile-section" style={{ marginTop: '0' }}>
-          <ProfileList items={history} emptyText="No watch history." forceRender={forceRender} />
-        </section>
-      )}
+          )
+        ) : (
+          <ProfileList items={history} emptyText="Nothing watched yet. Your history appears here after you play something." forceRender={forceRender} />
+        )}
+      </section>
 
-      {/* Feature #8: Theme Picker Section */}
-      <section style={{ marginTop: '3rem', borderTop: '1px solid var(--border-color)', paddingTop: '2rem' }}>
-        <h2 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '0.5rem' }}>🎨Appearance</h2>
-        <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>Choose your preferred theme</p>
-        
-        <div className="theme-picker-grid">
-          {AVAILABLE_THEMES.map((theme) => {
-            const isActive = getActiveTheme() === theme.id;
-            return (
-              <div
-                key={theme.id}
-                className={`theme-option ${isActive ? 'is-active' : ''}`}
-                onClick={() => {
-                  setActiveTheme(theme.id);
-                  forceRender();
-                  window.dispatchEvent(new CustomEvent('theme-changed', { detail: { themeId: theme.id } }));
-                }}
-                role="button"
-                tabIndex={0}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    setActiveTheme(theme.id);
-                    forceRender();
-                    window.dispatchEvent(new CustomEvent('theme-changed', { detail: { themeId: theme.id } }));
-                  }
-                }}
-              >
-                <div className="theme-preview" style={{ background: theme.id === 'minimal-light' ? '#f8f9fa' : '#1a1a1a', border: theme.id === 'minimal-light' ? '1px solid #dee2e6' : '1px solid #333' }}>
-                  <span>{theme.icon}</span>
-                </div>
-                <div className="theme-name">{theme.name}</div>
-                <div className="theme-description">{theme.description}</div>
-              </div>
-            );
-          })}
+      <section className="appearance">
+        <div className="appearance-head">
+          <p className="eyebrow">Appearance</p>
+          <h2>Choose your look</h2>
+          <p>Themes apply instantly and are remembered on this device.</p>
         </div>
+        <ThemePicker activeId={activeTheme} onPick={setActiveTheme} />
       </section>
     </main>
   );

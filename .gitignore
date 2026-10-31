@@ -36,3 +36,7 @@ env.js
 # OS Files
 .DS_Store
 Thumbs.db
+
+# Local user database
+server-database.json
+database.json

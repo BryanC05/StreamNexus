@@ -1,0 +1,68 @@
+/* Modern Dark — slate sky with an electric blue signal. Air structure. */
+:root {
+  color-scheme: dark;
+
+  --bg: #070d14;
+  --bg-image: none;
+  --panel: #0e1620;
+  --panel-soft: #131f2c;
+  --panel-strong: #182738;
+  --border: rgba(234, 242, 251, 0.16);
+  --border-soft: rgba(234, 242, 251, 0.08);
+  --text: #eaf2fb;
+  --muted: #90a5bb;
+
+  --accent: #4f8cff;
+  --accent-strong: #86b4ff;
+  --accent-ink: #05101f;
+  --accent-soft: rgba(79, 140, 255, 0.14);
+
+  --danger: #f0666a;
+  --danger-soft: rgba(240, 102, 106, 0.14);
+  --success: #3ddc97;
+
+  --chrome-bg: rgba(7, 13, 20, 0.46);
+  --chrome-bg-soft: rgba(255, 255, 255, 0.05);
+  --chrome-bg-strong: rgba(7, 13, 20, 0.76);
+  --chrome-border: rgba(234, 242, 251, 0.18);
+  --chrome-border-strong: rgba(234, 242, 251, 0.38);
+  --chrome-highlight: transparent;
+  --chrome-shadow: none;
+  --chrome-blur: blur(18px) saturate(130%);
+
+  --font-body: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-hero: 'Anton', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-accent: 'Caveat', 'Inter', ui-sans-serif, cursive;
+  --display-weight: 500;
+  --display-tracking: -0.02em;
+
+  --shadow-md: none;
+  --shadow-lg: none;
+
+  --canvas-accent: #4f8cff;
+  --header-bg: rgba(7, 13, 20, 0.85);
+  --hero-scrim: rgba(0, 0, 0, 0.66);
+  --hero-em: color-mix(in srgb, #4f8cff 45%, #ffffff);
+  --hero-ink: #ffffff;
+  --hero-muted: rgba(234, 242, 251, 0.72);
+  --hero-ring: rgba(234, 242, 251, 0.24);
+
+  --card-bg: #f5f5f5;
+  --card-hover-bg: #ffffff;
+  --card-ink: #1b1b1b;
+  --card-muted: #5d5d5d;
+  --card-line: rgba(27, 27, 27, 0.14);
+  --card-line-strong: rgba(27, 27, 27, 0.34);
+  --card-border: transparent;
+  --card-field-bg: #ffffff;
+  --card-link: #1b1b1b;
+  --card-link-underline: #2b7fff;
+
+  --media-bg: #111111;
+  --media-badge-bg: rgba(0, 0, 0, 0.55);
+  --media-badge-ink: #ffffff;
+  --media-badge-line: rgba(255, 255, 255, 0.14);
+  --media-favorite-bg: rgba(0, 0, 0, 0.55);
+  --media-favorite-ink: #ffffff;
+}

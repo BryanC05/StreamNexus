@@ -1,0 +1,81 @@
+/* Air Light — warm paper canvas with ink chrome. The light counterpart to Air. */
+:root {
+  color-scheme: light;
+
+  --bg: #f5f3ed;
+  --bg-image: none;
+  --panel: #ffffff;
+  --panel-soft: #efece5;
+  --panel-strong: #e7e3d9;
+  --border: rgba(27, 27, 27, 0.16);
+  --border-soft: rgba(27, 27, 27, 0.09);
+  --text: #1b1b1b;
+  --muted: #5d5d5d;
+
+  --accent: #1b1b1b;
+  --accent-strong: #000000;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(27, 27, 27, 0.06);
+
+  --danger: #9a2b2b;
+  --danger-soft: rgba(154, 43, 43, 0.08);
+  --success: #1f7a45;
+
+  --chrome-bg: rgba(255, 255, 255, 0.72);
+  --chrome-bg-soft: rgba(255, 255, 255, 0.55);
+  --chrome-bg-strong: rgba(250, 248, 242, 0.94);
+  --chrome-border: rgba(27, 27, 27, 0.16);
+  --chrome-border-strong: rgba(27, 27, 27, 0.34);
+  --chrome-highlight: transparent;
+  --chrome-shadow: none;
+  --chrome-blur: blur(18px) saturate(130%);
+
+  --font-body: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-hero: 'Anton', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-accent: 'Caveat', 'Inter', ui-sans-serif, cursive;
+  --display-weight: 500;
+  --display-tracking: -0.02em;
+
+  --shadow-md: none;
+  --shadow-lg: none;
+
+  --canvas-accent: #2b7fff;
+  --header-bg: rgba(245, 243, 237, 0.9);
+  --hero-scrim: rgba(0, 0, 0, 0.64);
+  --hero-em: color-mix(in srgb, #426188 60%, #ffffff);
+  --hero-ink: #ffffff;
+  --hero-muted: rgba(255, 255, 255, 0.74);
+  --hero-ring: rgba(255, 255, 255, 0.24);
+
+  --card-bg: #ffffff;
+  --card-hover-bg: #ffffff;
+  --card-ink: #1b1b1b;
+  --card-muted: #5d5d5d;
+  --card-line: rgba(27, 27, 27, 0.14);
+  --card-line-strong: rgba(27, 27, 27, 0.36);
+  --card-border: rgba(27, 27, 27, 0.08);
+  --card-field-bg: #f5f5f5;
+  --card-link: #1b1b1b;
+  --card-link-underline: #2b7fff;
+
+  --media-bg: #e6e3db;
+  --media-badge-bg: rgba(0, 0, 0, 0.58);
+  --media-badge-ink: #ffffff;
+  --media-badge-line: rgba(255, 255, 255, 0.16);
+  --media-favorite-bg: rgba(0, 0, 0, 0.58);
+  --media-favorite-ink: #ffffff;
+}
+
+/* On a white form card the primary action is ink, matching the light canvas. */
+.auth-card .primary-button {
+  border-color: var(--text);
+  background: var(--text);
+  color: var(--bg);
+}
+
+.auth-card .primary-button:hover {
+  border-color: #000000;
+  background: #000000;
+  color: var(--bg);
+}

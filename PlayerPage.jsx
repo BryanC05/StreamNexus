@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import {
   DEFAULT_TMDB_KEY, TMDB_API_URL, TMDB_IMAGE_URL, getTmdbHeaders,
@@ -7,7 +7,10 @@ import {
   uploadSubtitleToTempHost, fetchRecommendations, fetchReviews, fetchTmdbReviews, submitReview,
   isLoggedIn
 } from './app.js';
-import './royal-theme.css';
+import { DEFAULT_EMBED_BASE, EMBED_PROVIDERS, CUSTOM_PLAYER, CUSTOM_DOMAIN, normalizeProviderBase, buildProviderUrl, supportsSubtitleInjection } from './lib/providers.js';
+import { sampleAmbiance } from './lib/ambiance.js';
+import ThemeMenu from './components/ThemeMenu.jsx';
+import { ShieldIcon, SparklesIcon } from './components/Icons.jsx';
 
 function ReviewItemComponent({ rev }) {
   const [expanded, setExpanded] = useState(false);
@@ -15,7 +18,7 @@ function ReviewItemComponent({ rev }) {
   const displayText = expanded ? rev.text : (isLong ? rev.text.slice(0, 300) + '...' : rev.text);
 
   return (
-    <article style={{ background: 'rgba(255,255,255,0.03)', borderLeft: rev.isTmdb ? '3px solid #01b4e4' : '3px solid var(--metaphor-gold)', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+    <article style={{ background: 'var(--panel-soft)', borderLeft: rev.isTmdb ? '3px solid #01b4e4' : '3px solid var(--metaphor-gold)', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <strong style={{ color: rev.isTmdb ? '#01b4e4' : 'var(--gold-light)', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span>👤 {rev.username}</span>
@@ -116,13 +119,11 @@ export default function PlayerPage() {
   const [title, setTitle] = useState('');
   const [season, setSeason] = useState('1');
   const [episode, setEpisode] = useState('1');
-  const [server, setServer] = useState(() => {
-    let saved = readStore(SERVER_KEY, "https://vidsync.live/embed");
-    if (saved.includes("vidsrc.net") || saved.includes("vidsrc.to") || saved.includes("embed.su")) saved = "https://vidsync.live/embed";
-    return saved;
-  });
-  const [color, setColor] = useState('#d4af37');
-  const [autoPlay, setAutoPlay] = useState(false);
+  const [server, setServer] = useState(() =>
+    normalizeProviderBase(readStore(SERVER_KEY, DEFAULT_EMBED_BASE))
+  );
+  const [color] = useState('#2b7fff');
+  const [autoPlay] = useState(false);
   const [subUrl, setSubUrl] = useState(params.get('sub_url') || '');
   const [subtitleBlobUrl, setSubtitleBlobUrl] = useState('');
   const [subtitleText, setSubtitleText] = useState('');
@@ -131,6 +132,10 @@ export default function PlayerPage() {
   const [customVideoUrl, setCustomVideoUrl] = useState('');
   const [subtitleSize, setSubtitleSize] = useState(readStore('subtitle_size', '100%'));
   const [customDomain, setCustomDomain] = useState(() => readStore('custom_embed_domain', ''));
+  const [sandboxEnabled, setSandboxEnabled] = useState(() => readStore('player_sandbox_v1', false));
+  const [ambianceEnabled, setAmbianceEnabled] = useState(() => readStore('player_ambiance_v1', false));
+  const [ambiancePalette, setAmbiancePalette] = useState(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const [toasts, setToasts] = useState([]);
 
@@ -142,6 +147,17 @@ export default function PlayerPage() {
   const removeToast = useCallback((id) => {
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
+
+  const changeProvider = (nextServer, label) => {
+    if (nextServer === server) return;
+    setServer(nextServer);
+    const provider = EMBED_PROVIDERS.find(p => p.base === nextServer);
+    if (sandboxEnabled && provider?.requiresNoSandbox) {
+      showToast(`${label} refuses sandboxed frames — switch the sandbox off to play.`, 'warning', 6000);
+      return;
+    }
+    showToast(`Switched to ${label}. If it still fails, try another provider.`, 'info', 4000);
+  };
 
   const getCurrentEntry = useCallback(() => {
     return getTitleFromEntry({ id: tmdbId, mediaType, title, season, episode });
@@ -169,6 +185,54 @@ export default function PlayerPage() {
   useEffect(() => {
     writeStore('custom_embed_domain', customDomain);
   }, [customDomain]);
+
+  useEffect(() => {
+    writeStore('player_sandbox_v1', sandboxEnabled);
+  }, [sandboxEnabled]);
+
+  useEffect(() => {
+    writeStore('player_ambiance_v1', ambianceEnabled);
+  }, [ambianceEnabled]);
+
+  useEffect(() => {
+    const syncFullscreen = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    syncFullscreen();
+    document.addEventListener('fullscreenchange', syncFullscreen);
+    return () => document.removeEventListener('fullscreenchange', syncFullscreen);
+  }, []);
+
+  const toggleAmbiance = () => {
+    const next = !ambianceEnabled;
+    setAmbianceEnabled(next);
+    showToast(
+      next
+        ? 'Ambiance on — the light around the player is pulled from this title’s artwork.'
+        : 'Ambiance off.',
+      next ? 'success' : 'info',
+      3200
+    );
+  };
+
+  const toggleSandbox = () => {
+    const next = !sandboxEnabled;
+    setSandboxEnabled(next);
+    const provider = EMBED_PROVIDERS.find(p => p.base === server);
+    if (next && provider?.requiresNoSandbox) {
+      showToast(`${provider.label} refuses sandboxed frames — switch providers or leave the sandbox off.`, 'warning', 6000);
+      return;
+    }
+    showToast(
+      next
+        ? 'Sandbox on — embeds can no longer open popups or navigate this tab.'
+        : 'Sandbox off — embeds may open popups or navigate this tab.',
+      next ? 'success' : 'warning',
+      5000
+    );
+  };
+
+  useEffect(() => {
+    writeStore(SERVER_KEY, server);
+  }, [server]);
 
 
   // Sync state with URL search parameters to support hot-swapping and refreshes without blank screens
@@ -280,7 +344,7 @@ export default function PlayerPage() {
             key={star} 
             onClick={() => setUserRating(star)} 
             style={{ 
-              color: star <= userRating ? 'var(--metaphor-gold, #d4af37)' : 'rgba(255,255,255,0.2)',
+              color: star <= userRating ? 'var(--metaphor-gold)' : 'var(--border)',
               transition: 'color 0.2s ease, transform 0.1s ease',
             }}
           >
@@ -298,9 +362,13 @@ export default function PlayerPage() {
   const [events, setEvents] = useState([]);
   const lastTimeRef = useRef(null);
   const videoRef = useRef(null);
+  const playerFrameRef = useRef(null);
+  const lastPlayerEventAtRef = useRef(0);
+  const [playerReady, setPlayerReady] = useState(false);
   const [isFetchingSubs, setIsFetchingSubs] = useState(false);
-  const [renderTrigger, setRenderTrigger] = useState(0);
+  const [, setRenderTrigger] = useState(0);
   const [lightsOut, setLightsOut] = useState(false);
+  const [showControls, setShowControls] = useState(() => window.matchMedia('(min-width: 901px)').matches);
   const [showSubtitleTools, setShowSubtitleTools] = useState(false);
   const [showDownloadTools, setShowDownloadTools] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState('sync'); // 'sync', 'stretch', 'clean', 'replace', 'export'
@@ -310,6 +378,29 @@ export default function PlayerPage() {
   const [movieDuration, setMovieDuration] = useState(7200); // default 2 hours (in seconds)
   const [tvDuration, setTvDuration] = useState(2700); // default 45 mins (in seconds)
   const localTimeRef = useRef(0);
+
+  const ambianceEpisode = mediaType === 'tv'
+    ? episodesList.find(ep => String(ep.episode_number) === String(episode))
+    : null;
+
+  const ambianceImage = ambianceEpisode?.still_path
+    ? `${TMDB_IMAGE_URL}/w300${ambianceEpisode.still_path}`
+    : showDetails?.backdrop || showDetails?.poster || '';
+
+  useEffect(() => {
+    if (!ambianceEnabled || !ambianceImage) {
+      setAmbiancePalette(null);
+      return undefined;
+    }
+
+    let active = true;
+    sampleAmbiance(ambianceImage).then(palette => {
+      if (active) setAmbiancePalette(palette);
+    });
+    return () => {
+      active = false;
+    };
+  }, [ambianceEnabled, ambianceImage]);
 
   // Helper functions to parse, format, and shift WebVTT timestamps
   const parseVttTimestamp = (tStr) => {
@@ -462,7 +553,7 @@ export default function PlayerPage() {
         return line;
       }
       if (isInsideCue) {
-        const escapedFind = findStr.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        const escapedFind = findStr.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
         const regex = new RegExp(escapedFind, 'gi');
         return line.replace(regex, replaceStr);
       }
@@ -476,8 +567,7 @@ export default function PlayerPage() {
     const lines = srtText.split('\n');
     let srtLines = [];
     let cueIndex = 1;
-    let isInsideCue = false;
-    
+
     for (let i = 0; i < lines.length; i++) {
       let line = lines[i];
       if (line.includes('-->')) {
@@ -485,7 +575,6 @@ export default function PlayerPage() {
         srtLines.push(String(cueIndex));
         srtLines.push(formattedTime);
         cueIndex++;
-        isInsideCue = true;
       } else {
         srtLines.push(line);
       }
@@ -586,12 +675,18 @@ export default function PlayerPage() {
 
   useEffect(() => {
     const handleMessage = (e) => {
+      const frame = playerFrameRef.current;
+      if (!frame || e.source !== frame.contentWindow) return;
+
       let parsed = e.data;
       if (typeof parsed === 'string') { try { parsed = JSON.parse(parsed); } catch { return; } }
       if (parsed?.type !== 'PLAYER_EVENT') return;
-      const incomingTime = parsed.data?.currentTime ?? parsed.data?.timestamp;
+      const incomingTime = Number(parsed.data?.currentTime ?? parsed.data?.timestamp);
+      if (!Number.isFinite(incomingTime) || incomingTime < 0) return;
       if (incomingTime === lastTimeRef.current) return;
       lastTimeRef.current = incomingTime;
+      localTimeRef.current = incomingTime;
+      lastPlayerEventAtRef.current = Date.now();
       saveProgress(getCurrentEntry(), parsed.data || {});
       setEvents(prev => [JSON.stringify(parsed, null, 2), ...prev].slice(0, 8));
     };
@@ -599,13 +694,27 @@ export default function PlayerPage() {
     return () => window.removeEventListener('message', handleMessage);
   }, [getCurrentEntry]);
 
+  // A newly loaded embed has no playback signal yet; let its load event re-arm estimation.
+  useEffect(() => {
+    setPlayerReady(false);
+  }, [tmdbId, mediaType, season, episode, server, customDomain, subUrl, color, autoPlay]);
+
+  const sendKeyToPlayer = useCallback((key) => {
+    const frame = playerFrameRef.current;
+    if (!frame?.contentWindow) return;
+    let origin = '*';
+    try { origin = new URL(frame.src).origin; } catch { /* keep wildcard for malformed URLs */ }
+    frame.contentWindow.postMessage({ type: 'KEYBOARD_EVENT', key }, origin);
+  }, []);
+
   // Sync localTimeRef with saved progress when current media entry changes
   useEffect(() => {
     const saved = getSavedProgress(getCurrentEntry());
     localTimeRef.current = saved?.currentTime || Number(params.get('progress') || 0);
   }, [getCurrentEntry, params]);
 
-  // Local interval tracker to estimate playback progress on third-party cross-origin iframes
+  // Fallback estimator for cross-origin embeds. It only runs when the iframe has loaded,
+  // the tab is visible, and the provider has not sent a real playback event recently.
   useEffect(() => {
     if (server === 'custom') return;
 
@@ -613,14 +722,15 @@ export default function PlayerPage() {
     localTimeRef.current = saved?.currentTime || Number(params.get('progress') || 0);
 
     const interval = setInterval(() => {
-      if (document.hidden) return;
-
-      localTimeRef.current += 5; // increment by 5s
+      if (document.hidden || !playerReady) return;
+      if (Date.now() - lastPlayerEventAtRef.current < 15000) return;
 
       const duration = mediaType === 'tv' ? tvDuration : movieDuration;
+      if (!duration || localTimeRef.current >= duration) return;
+
+      localTimeRef.current = Math.min(localTimeRef.current + 5, duration);
       const progressPercent = (localTimeRef.current / duration) * 100;
 
-      // Save progress to local storage and update history
       saveProgress(getCurrentEntry(), {
         currentTime: localTimeRef.current,
         duration: duration,
@@ -629,7 +739,7 @@ export default function PlayerPage() {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [server, mediaType, tvDuration, movieDuration, getCurrentEntry, params]);
+  }, [server, mediaType, tvDuration, movieDuration, getCurrentEntry, params, playerReady]);
 
   useEffect(() => {
     if (!lightsOut) return;
@@ -659,11 +769,7 @@ export default function PlayerPage() {
             showToast('Paused', 'info', 1000);
           }
         } else {
-          // For iframe players, send message to iframe
-          const iframe = document.querySelector('.player-iframe');
-          if (iframe) {
-            iframe.contentWindow.postMessage({ type: 'KEYBOARD_EVENT', key: 'Space' }, '*');
-          }
+          sendKeyToPlayer('Space');
         }
       }
 
@@ -691,11 +797,7 @@ export default function PlayerPage() {
           video.muted = !video.muted;
           showToast(video.muted ? 'Muted' : 'Unmuted', 'info', 1000);
         } else {
-          // For iframe players
-          const iframe = document.querySelector('.player-iframe');
-          if (iframe) {
-            iframe.contentWindow.postMessage({ type: 'KEYBOARD_EVENT', key: 'M' }, '*');
-          }
+          sendKeyToPlayer('M');
         }
       }
 
@@ -742,7 +844,7 @@ export default function PlayerPage() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showToast]);
+  }, [showToast, sendKeyToPlayer]);
 
   useEffect(() => {
     return () => {
@@ -820,12 +922,15 @@ export default function PlayerPage() {
           ? `${title.replace(/[^a-zA-Z0-9]/g, '_')}_S${season}E${episode}.vtt`
           : `${title.replace(/[^a-zA-Z0-9]/g, '_')}_Subtitle.vtt`;
         
-        // Only VidSrc servers support URL-based subtitle injection.
-        const activeServer = server === 'custom_domain' ? customDomain : server;
-        const isVidsrc = activeServer.includes('vidsrc') || activeServer.includes('vidsync') || activeServer.includes('vidcore');
+        // Only some providers accept a URL-based subtitle injection.
+        const activeServer = (server === 'custom_domain' ? customDomain : server).trim().replace(/\/+$/, '');
+        const provider = EMBED_PROVIDERS.find(p => p.base === activeServer);
+        const canInject = provider
+          ? provider.subtitleInjection
+          : supportsSubtitleInjection(activeServer) || activeServer.includes('vidsrc') || activeServer.includes('vidcore');
 
-        if (!isVidsrc) {
-          // Download directly for Vidking and other third-party servers that don't support URL injection
+        if (!canInject) {
+          // Download directly for third-party servers that don't support URL injection
           const blob = new Blob([text], { type: 'text/vtt' });
           const newUrl = URL.createObjectURL(blob);
           const a = document.createElement('a');
@@ -835,7 +940,7 @@ export default function PlayerPage() {
           a.click();
           document.body.removeChild(a);
           URL.revokeObjectURL(newUrl);
-          showToast("This provider (Vidking) does not support automatic subtitle injection.\n\nWe have downloaded the subtitle file to your device. Please click the CC/Subtitle button inside the player to upload it manually. You can adjust the offset/position and click 'Download Subtitles' to save it again.", 'warning', 10000);
+          showToast("This provider does not support automatic subtitle injection.\n\nWe have downloaded the subtitle file to your device. Please click the CC/Subtitle button inside the player to upload it manually. You can adjust the offset/position and click 'Download Subtitles' to save it again.", 'warning', 10000);
           return;
         }
 
@@ -889,6 +994,7 @@ export default function PlayerPage() {
           genres: data.genres ? data.genres.map(g => g.name).join(', ') : '',
           rating: data.vote_average ? data.vote_average.toFixed(1) : null,
           poster: data.poster_path ? `${TMDB_IMAGE_URL}/w342${data.poster_path}` : null,
+          backdrop: data.backdrop_path ? `${TMDB_IMAGE_URL}/w780${data.backdrop_path}` : null,
           status: data.status,
           tagline: data.tagline
         });
@@ -919,6 +1025,7 @@ export default function PlayerPage() {
           genres: data.genres ? data.genres.map(g => g.name).join(', ') : '',
           rating: data.vote_average ? data.vote_average.toFixed(1) : null,
           poster: data.poster_path ? `${TMDB_IMAGE_URL}/w342${data.poster_path}` : null,
+          backdrop: data.backdrop_path ? `${TMDB_IMAGE_URL}/w780${data.backdrop_path}` : null,
           status: data.status,
           tagline: data.tagline
         });
@@ -935,33 +1042,29 @@ export default function PlayerPage() {
       .then(data => setEpisodesList(data.episodes || []));
   }, [tmdbId, season, mediaType]);
 
+  const changeEpisode = (nextSeason, nextEpisode) => {
+    setSeason(String(nextSeason));
+    setEpisode(String(nextEpisode));
+    const newParams = new URLSearchParams(params);
+    newParams.set('season', String(nextSeason));
+    newParams.set('episode', String(nextEpisode));
+    newParams.delete('progress');
+    setParams(newParams);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleNextEpisode = () => {
     if (mediaType !== 'tv') return;
     const currentEpisodeNum = Number(episode);
     const currentSeasonNum = Number(season);
-    
+
     const nextEpExists = episodesList.some(ep => ep.episode_number === currentEpisodeNum + 1);
     if (nextEpExists) {
-      const nextEp = currentEpisodeNum + 1;
-      setEpisode(String(nextEp));
-      const newParams = new URLSearchParams(params);
-      newParams.set('episode', String(nextEp));
-      setParams(newParams);
-      window.scrollTo({top: 0, behavior: 'smooth'});
+      changeEpisode(currentSeasonNum, currentEpisodeNum + 1);
+    } else if (tvSeasons.some(s => s.season_number === currentSeasonNum + 1)) {
+      changeEpisode(currentSeasonNum + 1, 1);
     } else {
-      const nextSeasonExists = tvSeasons.some(s => s.season_number === currentSeasonNum + 1);
-      if (nextSeasonExists) {
-        const nextSeason = currentSeasonNum + 1;
-        setSeason(String(nextSeason));
-        setEpisode('1');
-        const newParams = new URLSearchParams(params);
-        newParams.set('season', String(nextSeason));
-        newParams.set('episode', '1');
-        setParams(newParams);
-        window.scrollTo({top: 0, behavior: 'smooth'});
-      } else {
-        showToast("You have reached the end of the series!", 'info');
-      }
+      showToast("You have reached the end of the series!", 'info');
     }
   };
 
@@ -980,9 +1083,15 @@ export default function PlayerPage() {
   };
 
   const buildEmbedUrl = () => {
-    const activeServer = server === 'custom_domain' ? customDomain : server;
-    let path = `${activeServer}/movie/${tmdbId}`;
-    if (mediaType === 'tv') path = `${activeServer}/tv/${tmdbId}/${season}/${episode}`;
+    const activeServer = (server === CUSTOM_DOMAIN ? customDomain : server).trim().replace(/\/+$/, '');
+    if (!activeServer) return 'about:blank';
+    const embedUrl = buildProviderUrl({
+      base: activeServer,
+      id: tmdbId,
+      mediaType,
+      season,
+      episode,
+    });
     const query = new URLSearchParams();
     if (color) query.set('color', color.replace('#', ''));
     if (autoPlay) query.set('autoPlay', 'true');
@@ -991,7 +1100,8 @@ export default function PlayerPage() {
       query.set('sub_default', 'true');
     }
     const qStr = query.toString();
-    return qStr ? `${path}?${qStr}` : path;
+    if (!qStr) return embedUrl;
+    return `${embedUrl}${embedUrl.includes('?') ? '&' : '?'}${qStr}`;
   };
 
   const isFav = isFavorite(getCurrentEntry());
@@ -1033,7 +1143,7 @@ export default function PlayerPage() {
           background: rgba(0, 0, 0, 0.75) !important;
           color: #ffffff !important;
           text-shadow: 1px 1px 2px #000, -1px -1px 2px #000, 1px -1px 2px #000, -1px 1px 2px #000 !important;
-          font-family: 'Outfit', 'Inter', sans-serif !important;
+          font-family: 'Inter', ui-sans-serif, system-ui, sans-serif !important;
           border-radius: 4px !important;
           padding: 2px 6px !important;
         }
@@ -1042,7 +1152,7 @@ export default function PlayerPage() {
           background: rgba(0, 0, 0, 0.75) !important;
           color: #ffffff !important;
           text-shadow: 1px 1px 2px #000, -1px -1px 2px #000, 1px -1px 2px #000, -1px 1px 2px #000 !important;
-          font-family: 'Outfit', 'Inter', sans-serif !important;
+          font-family: 'Inter', ui-sans-serif, system-ui, sans-serif !important;
           border-radius: 4px !important;
           padding: 2px 6px !important;
         }
@@ -1056,13 +1166,14 @@ export default function PlayerPage() {
       `}</style>
       {lightsOut && <div className="lights-out-overlay" onClick={() => setLightsOut(false)} />}
       <header className="player-topbar">
-        <Link className="secondary-button" to="/">Home</Link>
-        <div><p className="eyebrow">{playerMeta}</p><h1>{title}</h1></div>
-        <div className="header-actions">
+        <Link className="secondary-button player-back" to="/" aria-label="Back to home">← Home</Link>
+        <div className="player-heading"><p className="eyebrow">{playerMeta}</p><h1>{title}</h1></div>
+        <div className="header-actions player-actions-top">
           <button className={`secondary-button ${detailsOpen ? 'is-active' : ''}`} onClick={() => setDetailsOpen(o => !o)} title="Toggle Info Panel">📋 Info</button>
           <Link className="secondary-button" to="/profile">Profile</Link>
           <button className={`secondary-button ${lightsOut ? 'is-active' : ''}`} onClick={() => setLightsOut(lo => !lo)} title="Toggle Lights Out mode">💡 Lights {lightsOut ? 'On' : 'Out'}</button>
           <button className={`secondary-button ${isFav ? 'is-active' : ''}`} onClick={() => { toggleFavorite(getCurrentEntry()); setRenderTrigger(x => x+1); }}>{isFav ? 'Saved' : 'Favorite'}</button>
+          <ThemeMenu />
         </div>
       </header>
 
@@ -1084,10 +1195,10 @@ export default function PlayerPage() {
               )}
               {/* Details Text Body */}
               <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto', flex: 1 }}>
-                <h2 style={{ fontFamily: 'Cinzel, serif', color: 'var(--parchment)', fontSize: '1.25rem', margin: 0 }}>{title}</h2>
+                <h2 style={{ fontFamily: 'var(--font-display)', color: 'var(--parchment)', fontSize: '1.25rem', margin: 0 }}>{title}</h2>
                 {showDetails.tagline && <em style={{ fontSize: '0.85rem', color: 'var(--gold-light)', fontStyle: 'italic' }}>"{showDetails.tagline}"</em>}
                 
-                <hr style={{ border: 'none', borderTop: '1px solid rgba(212,175,55,0.2)', margin: '4px 0' }} />
+                <hr style={{ border: 'none', borderTop: '1px solid var(--border-soft)', margin: '4px 0' }} />
                 
                 {mediaType === 'tv' && (
                   <div style={{ fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -1134,36 +1245,90 @@ export default function PlayerPage() {
           )}
         </aside>
 
-        {/* Right Side: Player Frame Wrap & Episodes Grid */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {server === 'custom' ? (
-            <div className="player-frame-wrap" style={{ margin: 0 }}>
-              <video ref={videoRef} controls autoPlay={autoPlay} className="player-video" src={customVideoUrl} onTimeUpdate={handleVideoTimeUpdate} onLoadedMetadata={handleVideoLoaded}>
-                Your browser does not support the video tag.
-              </video>
-            </div>
-          ) : (
-            <div className="player-frame-wrap" style={{ margin: 0 }}>
-              <iframe 
-                src={finalUrl} 
-                title="Player" 
-                frameBorder="0" 
-                allow="autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen" 
-                allowFullScreen={true}
-                webkitallowfullscreen="true"
-                mozallowfullscreen="true"
-                className="player-iframe"
-              ></iframe>
-            </div>
-          )}
+        {/* Right Side: Player Stage & Episodes */}
+        <div
+          className="player-main"
+          style={ambiancePalette ? { '--ambiance-a': ambiancePalette.primary, '--ambiance-b': ambiancePalette.secondary } : undefined}
+        >
+          <div className={`player-stage${ambianceEnabled && ambiancePalette && !isFullscreen ? ' has-ambiance' : ''}`}>
+            {server === 'custom' ? (
+              <div className="player-frame-wrap" style={{ margin: 0 }}>
+                <video ref={videoRef} controls autoPlay={autoPlay} className="player-video" src={customVideoUrl} onTimeUpdate={handleVideoTimeUpdate} onLoadedMetadata={handleVideoLoaded}>
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+            ) : (
+              <div className="player-frame-wrap" style={{ margin: 0 }}>
+                <iframe 
+                  ref={playerFrameRef}
+                  src={finalUrl} 
+                  title="Player" 
+                  frameBorder="0" 
+                  allow="encrypted-media; autoplay *; fullscreen *; gyroscope; picture-in-picture" 
+                  allowFullScreen={true}
+                  webkitallowfullscreen="true"
+                  mozallowfullscreen="true"
+                  className="player-iframe"
+                  sandbox={sandboxEnabled ? 'allow-scripts allow-same-origin allow-forms allow-presentation' : undefined}
+                  onLoad={() => setPlayerReady(true)}
+                ></iframe>
+              </div>
+            )}
+          </div>
 
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '-10px', marginBottom: '10px' }}>
+          <div className="player-stage-bar">
+            {server !== CUSTOM_PLAYER ? (
+              <div className="provider-switcher" role="group" aria-label="Streaming provider">
+                <span className="provider-switcher-label">Server</span>
+                {EMBED_PROVIDERS.map(provider => (
+                  <button
+                    key={provider.id}
+                    type="button"
+                    className={`provider-chip ${server === provider.base ? 'is-active' : ''}`}
+                    aria-pressed={server === provider.base}
+                    onClick={() => changeProvider(provider.base, provider.label)}
+                  >
+                    {provider.label}
+                  </button>
+                ))}
+              </div>
+            ) : <span />}
+            <div className="player-stage-meta">
+              <span className="stage-hint">Blank player? Switch server.</span>
+              <button
+                type="button"
+                className={`ambiance-chip ${ambianceEnabled ? 'is-active' : ''}`}
+                aria-pressed={ambianceEnabled}
+                onClick={toggleAmbiance}
+                title={ambianceEnabled
+                  ? 'Ambiance is on: turn it off to dim the light around the player'
+                  : 'Add a soft glow around the player pulled from this title’s colors'}
+              >
+                <SparklesIcon size={13} />
+                Ambiance {ambianceEnabled ? 'on' : 'off'}
+              </button>
+              <button
+                type="button"
+                className={`sandbox-chip ${sandboxEnabled ? 'is-active' : 'is-off'}`}
+                aria-pressed={sandboxEnabled}
+                onClick={toggleSandbox}
+                title={sandboxEnabled
+                  ? 'Sandbox is on: embeds cannot open popups or navigate this tab'
+                  : 'Sandbox is off: embeds may open popups or navigate this tab. Click to isolate the player.'}
+              >
+                <ShieldIcon off={!sandboxEnabled} />
+                Sandbox {sandboxEnabled ? 'on' : 'off'}
+              </button>
+            </div>
+          </div>
+
+          <div className="player-actions">
             {server === 'custom' ? (
               <button 
                 type="button" 
                 className="secondary-button" 
                 onClick={downloadCustomVideo}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 16px', background: 'var(--metaphor-gold)', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 16px', background: 'var(--metaphor-gold)', color: 'var(--accent-ink)', fontWeight: 'bold', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
               >
                 💾 Download Video File
               </button>
@@ -1172,12 +1337,14 @@ export default function PlayerPage() {
                 type="button" 
                 className="secondary-button" 
                 onClick={() => {
+                  setShowControls(true);
                   setShowDownloadTools(true);
-                  const el = document.querySelector('.player-sidebar');
-                  if (el) el.scrollIntoView({ behavior: 'smooth' });
-                  showToast("Use one of the downloader tools in the sidebar to download the iframe stream!", 'info');
+                  setTimeout(() => {
+                    document.getElementById('player-tools-panel')?.scrollIntoView({ behavior: 'smooth' });
+                  }, 60);
+                  showToast("Use one of the downloader tools below to download the iframe stream!", 'info');
                 }}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 16px', border: '1px solid rgba(212, 175, 55, 0.4)', background: 'rgba(212, 175, 55, 0.05)', color: 'var(--gold-light)', borderRadius: '4px', cursor: 'pointer' }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 16px', border: '1px solid var(--border-gold)', background: 'var(--accent-soft)', color: 'var(--gold-light)', borderRadius: '4px', cursor: 'pointer' }}
               >
                 📥 Download Video Options
               </button>
@@ -1186,14 +1353,14 @@ export default function PlayerPage() {
 
           {mediaType === 'tv' && (
             <div className="episodes-section" style={{ width: '100%' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '1.5rem', borderBottom: '1px solid rgba(212, 175, 55, 0.2)', paddingBottom: '12px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-soft)', paddingBottom: '12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <h2 style={{ fontFamily: 'Cinzel, serif', color: 'var(--parchment)', fontSize: '1.75rem', margin: 0 }}>Episodes</h2>
+                  <h2 style={{ fontFamily: 'var(--font-display)', color: 'var(--parchment)', fontSize: '1.75rem', margin: 0 }}>Episodes</h2>
                   
                   <button 
                     type="button" 
                     className="secondary-button" 
-                    style={{ borderColor: 'var(--gold)', background: 'rgba(212, 175, 55, 0.05)', color: 'var(--gold-light)' }} 
+                    style={{ borderColor: 'var(--gold)', background: 'var(--accent-soft)', color: 'var(--gold-light)' }} 
                     onClick={handleNextEpisode}
                     disabled={getNextEpisodeLabel() === "End of Series"}
                   >
@@ -1209,7 +1376,7 @@ export default function PlayerPage() {
                         type="button"
                         className={`secondary-button ${Number(season) === s.season_number ? 'is-active' : ''}`}
                         style={{ flex: '0 0 auto', scrollSnapAlign: 'start', minHeight: '38px', padding: '0 18px', fontSize: '0.85rem' }}
-                        onClick={() => { setSeason(s.season_number); setEpisode(1); setProgress(''); }}
+                        onClick={() => changeEpisode(s.season_number, 1)}
                       >
                         Season {s.season_number}
                       </button>
@@ -1219,16 +1386,16 @@ export default function PlayerPage() {
               </div>
 
               {!DEFAULT_TMDB_KEY ? (
-                <div style={{ padding: '2rem', textAlign: 'center', border: '1px dashed var(--gold)', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.02)' }}>
+                <div style={{ padding: '2rem', textAlign: 'center', border: '1px dashed var(--gold)', borderRadius: '12px', background: 'var(--panel-soft)' }}>
                   <strong>Episodes List Unavailable</strong><br/>
-                  To view episode names and thumbnails, please add a valid TMDB API Key to your <code>env.js</code> file.
+                  To view episode names and thumbnails, set <code>VITE_TMDB_API_KEY</code> in your environment.
                 </div>
               ) : episodesList.length === 0 ? (
                 <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--parchment-dim)' }}>Loading episodes for Season {season}...</div>
               ) : (
                 <div style={{ display: 'grid', gap: '1.25rem', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
                   {episodesList.map(ep => (
-                    <button key={ep.episode_number} onClick={() => { setEpisode(ep.episode_number); setProgress(''); window.scrollTo({top: 0, behavior: 'smooth'}); }} className={`episode-button ${Number(episode) === ep.episode_number ? 'is-active' : ''}`} style={{ display: 'flex', gap: '1rem', padding: '0.75rem', textAlign: 'left', cursor: 'pointer', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', transition: 'all 0.2s ease', overflow: 'hidden' }}>
+                    <button key={ep.episode_number} onClick={() => changeEpisode(season, ep.episode_number)} className={`episode-button ${Number(episode) === ep.episode_number ? 'is-active' : ''}`} style={{ display: 'flex', gap: '1rem', padding: '0.75rem', textAlign: 'left', cursor: 'pointer', background: 'var(--panel-soft)', border: '1px solid var(--border)', borderRadius: '8px', transition: 'all 0.2s ease', overflow: 'hidden' }}>
                       {ep.still_path ? <img src={`${TMDB_IMAGE_URL}/w342${ep.still_path}`} width="120" height="68" style={{objectFit:'cover', borderRadius: '4px'}} /> : <div style={{width: 120, height: 68, borderRadius: '4px', background: '#222'}} className="episode-placeholder"></div>}
                       <div style={{ overflow: 'hidden', flex: 1 }}>
                         <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '0.95rem', color: 'var(--parchment)' }}>{ep.episode_number}. {ep.name || 'TBA'}</h4>
@@ -1243,22 +1410,31 @@ export default function PlayerPage() {
         </div>
       </div>
 
-      <section className="watch-layout" style={{ display: 'block' }}>
-        <aside className="player-sidebar" style={{ maxWidth: '100%' }}>
+      <section className="player-tools">
+        <button
+          type="button"
+          className={`player-tools-toggle ${showControls ? 'is-open' : ''}`}
+          aria-expanded={showControls}
+          aria-controls="player-tools-panel"
+          onClick={() => setShowControls(open => !open)}
+        >
+          <span>⚙️ Playback, subtitles &amp; tools</span>
+          <span className="player-tools-chevron" aria-hidden="true">{showControls ? '−' : '+'}</span>
+        </button>
+        {showControls && (
+          <section className="watch-layout" id="player-tools-panel" style={{ display: 'block' }}>
+            <aside className="player-sidebar" style={{ maxWidth: '100%' }}>
           <form className="control-grid">
             <label className="field"><span>Server Provider</span>
-              <select value={server} onChange={(e) => { setServer(e.target.value); writeStore(SERVER_KEY, e.target.value); }}>
-                <optgroup label="Standard Multiservers">
-                  <option value="https://vidsrc.me/embed">VidSrc.me (Most Reliable)</option>
-                  <option value="https://vidsrc.in/embed">VidSrc.in</option>
-                  <option value="https://vidsrc.pm/embed">VidSrc.pm</option>
-                  <option value="https://vidsync.live/embed">VidSync.live</option>
-                  <option value="https://vidcore.org/embed">VidCore.org</option>
-                  <option value="https://www.vidking.net/embed">Vidking</option>
+              <select value={server} onChange={(e) => setServer(e.target.value)}>
+                <optgroup label="Streaming Providers">
+                  {EMBED_PROVIDERS.map(provider => (
+                    <option key={provider.id} value={provider.base}>{provider.label}</option>
+                  ))}
                 </optgroup>
                 <optgroup label="Advanced Players">
-                  <option value="custom_domain">Custom Embed Domain...</option>
-                  <option value="custom">Custom HTML5 Video Player</option>
+                  <option value={CUSTOM_DOMAIN}>Custom Embed Domain...</option>
+                  <option value={CUSTOM_PLAYER}>Custom HTML5 Video Player</option>
                 </optgroup>
               </select>
             </label>
@@ -1308,7 +1484,7 @@ export default function PlayerPage() {
               </div>
               
               <label style={{ display: 'block', margin: '8px 0 12px 0', cursor: 'pointer' }}>
-                <span style={{ display: 'block', fontSize: '0.8rem', color: '#ccc', marginBottom: '4px' }}>Upload Custom Subtitle File (SRT or VTT)</span>
+                <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--muted)', marginBottom: '4px' }}>Upload Custom Subtitle File (SRT or VTT)</span>
                 <input type="file" accept=".vtt,.srt" onChange={e => {
                   if (e.target.files.length > 0) {
                     const file = e.target.files[0];
@@ -1322,7 +1498,7 @@ export default function PlayerPage() {
                     };
                     reader.readAsText(file);
                   }
-                }} style={{ fontSize: '0.8rem', display: 'block', width: '100%', padding: '6px', background: '#111', border: '1px dashed rgba(212, 175, 55, 0.4)', borderRadius: '4px', color: '#aaa' }} />
+                }} style={{ fontSize: '0.8rem', display: 'block', width: '100%', padding: '6px', background: 'var(--panel-soft)', border: '1px dashed var(--border-gold)', borderRadius: '4px', color: 'var(--muted)' }} />
               </label>
 
               <p style={{ margin: '0 0 12px 0', fontSize: '0.8rem' }}>Instantly download subtitles, then upload them using the video player's CC button.</p>
@@ -1330,7 +1506,7 @@ export default function PlayerPage() {
               <button 
                 type="button" 
                 className="secondary-button" 
-                style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', padding: '10px 14px', border: '1px solid rgba(212, 175, 55, 0.4)', background: 'rgba(212, 175, 55, 0.05)', color: 'var(--gold-light)', marginBottom: '8px' }} 
+                style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', padding: '10px 14px', border: '1px solid var(--border-gold)', background: 'var(--accent-soft)', color: 'var(--gold-light)', marginBottom: '8px' }} 
                 onClick={() => setShowSubtitleTools(!showSubtitleTools)}
               >
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
@@ -1346,7 +1522,7 @@ export default function PlayerPage() {
                   flexDirection: 'column',
                   gap: '12px',
                   padding: '16px',
-                  background: 'rgba(255, 255, 255, 0.03)',
+                  background: 'var(--panel-soft)',
                   borderRadius: '8px',
                   border: '1px solid rgba(255, 255, 255, 0.08)',
                   marginBottom: '12px',
@@ -1442,7 +1618,7 @@ export default function PlayerPage() {
               <button 
                 type="button" 
                 className="secondary-button" 
-                style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', padding: '10px 14px', border: '1px solid rgba(212, 175, 55, 0.4)', background: 'rgba(212, 175, 55, 0.05)', color: 'var(--gold-light)', marginBottom: '8px' }} 
+                style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', padding: '10px 14px', border: '1px solid var(--border-gold)', background: 'var(--accent-soft)', color: 'var(--gold-light)', marginBottom: '8px' }} 
                 onClick={() => setShowDownloadTools(!showDownloadTools)}
               >
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
@@ -1458,7 +1634,7 @@ export default function PlayerPage() {
                   flexDirection: 'column',
                   gap: '12px',
                   padding: '16px',
-                  background: 'rgba(255, 255, 255, 0.03)',
+                  background: 'var(--panel-soft)',
                   borderRadius: '8px',
                   border: '1px solid rgba(255, 255, 255, 0.08)',
                   marginBottom: '12px',
@@ -1468,14 +1644,14 @@ export default function PlayerPage() {
                   {server === 'custom' ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       <strong style={{ fontSize: '0.85rem', color: 'var(--gold-light)' }}>Direct Download</strong>
-                      <p style={{ margin: 0, fontSize: '0.8rem', color: '#ccc' }}>
+                      <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--muted)' }}>
                         You are using the Custom HTML5 Video Player. You can download the video file directly:
                       </p>
                       <button 
                         type="button" 
                         className="secondary-button" 
                         onClick={downloadCustomVideo}
-                        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px', background: 'var(--metaphor-gold)', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px', background: 'var(--metaphor-gold)', color: 'var(--accent-ink)', fontWeight: 'bold', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
                       >
                         💾 Download Video File
                       </button>
@@ -1483,8 +1659,8 @@ export default function PlayerPage() {
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       <strong style={{ fontSize: '0.85rem', color: 'var(--gold-light)' }}>Iframe Streams Notice</strong>
-                      <p style={{ margin: 0, fontSize: '0.8rem', color: '#ccc' }}>
-                        Due to browser security policy, third-party embedded video streams (like VidSync, VidCore, etc.) cannot be downloaded directly via single click.
+                      <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--muted)' }}>
+                        Due to browser security policy, third-party embedded video streams (like VidSrc, VidCore, etc.) cannot be downloaded directly via single click.
                       </p>
                     </div>
                   )}
@@ -1532,8 +1708,8 @@ export default function PlayerPage() {
                     minHeight: '32px', 
                     fontSize: '0.8rem', 
                     padding: '6px 12px', 
-                    background: activeSubTab === 'sync' ? 'rgba(212, 175, 55, 0.15)' : 'transparent', 
-                    color: activeSubTab === 'sync' ? 'var(--gold-light)' : '#aaa', 
+                    background: activeSubTab === 'sync' ? 'var(--accent-soft)' : 'transparent', 
+                    color: activeSubTab === 'sync' ? 'var(--gold-light)' : 'var(--muted)', 
                     borderColor: activeSubTab === 'sync' ? 'var(--gold)' : 'transparent',
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -1551,8 +1727,8 @@ export default function PlayerPage() {
                     minHeight: '32px', 
                     fontSize: '0.8rem', 
                     padding: '6px 12px', 
-                    background: activeSubTab === 'style' ? 'rgba(212, 175, 55, 0.15)' : 'transparent', 
-                    color: activeSubTab === 'style' ? 'var(--gold-light)' : '#aaa', 
+                    background: activeSubTab === 'style' ? 'var(--accent-soft)' : 'transparent', 
+                    color: activeSubTab === 'style' ? 'var(--gold-light)' : 'var(--muted)', 
                     borderColor: activeSubTab === 'style' ? 'var(--gold)' : 'transparent',
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -1570,8 +1746,8 @@ export default function PlayerPage() {
                     minHeight: '32px', 
                     fontSize: '0.8rem', 
                     padding: '6px 12px', 
-                    background: activeSubTab === 'stretch' ? 'rgba(212, 175, 55, 0.15)' : 'transparent', 
-                    color: activeSubTab === 'stretch' ? 'var(--gold-light)' : '#aaa', 
+                    background: activeSubTab === 'stretch' ? 'var(--accent-soft)' : 'transparent', 
+                    color: activeSubTab === 'stretch' ? 'var(--gold-light)' : 'var(--muted)', 
                     borderColor: activeSubTab === 'stretch' ? 'var(--gold)' : 'transparent',
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -1589,8 +1765,8 @@ export default function PlayerPage() {
                     minHeight: '32px', 
                     fontSize: '0.8rem', 
                     padding: '6px 12px', 
-                    background: activeSubTab === 'clean' ? 'rgba(212, 175, 55, 0.15)' : 'transparent', 
-                    color: activeSubTab === 'clean' ? 'var(--gold-light)' : '#aaa', 
+                    background: activeSubTab === 'clean' ? 'var(--accent-soft)' : 'transparent', 
+                    color: activeSubTab === 'clean' ? 'var(--gold-light)' : 'var(--muted)', 
                     borderColor: activeSubTab === 'clean' ? 'var(--gold)' : 'transparent',
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -1608,8 +1784,8 @@ export default function PlayerPage() {
                     minHeight: '32px', 
                     fontSize: '0.8rem', 
                     padding: '6px 12px', 
-                    background: activeSubTab === 'replace' ? 'rgba(212, 175, 55, 0.15)' : 'transparent', 
-                    color: activeSubTab === 'replace' ? 'var(--gold-light)' : '#aaa', 
+                    background: activeSubTab === 'replace' ? 'var(--accent-soft)' : 'transparent', 
+                    color: activeSubTab === 'replace' ? 'var(--gold-light)' : 'var(--muted)', 
                     borderColor: activeSubTab === 'replace' ? 'var(--gold)' : 'transparent',
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -1627,8 +1803,8 @@ export default function PlayerPage() {
                     minHeight: '32px', 
                     fontSize: '0.8rem', 
                     padding: '6px 12px', 
-                    background: activeSubTab === 'export' ? 'rgba(212, 175, 55, 0.15)' : 'transparent', 
-                    color: activeSubTab === 'export' ? 'var(--gold-light)' : '#aaa', 
+                    background: activeSubTab === 'export' ? 'var(--accent-soft)' : 'transparent', 
+                    color: activeSubTab === 'export' ? 'var(--gold-light)' : 'var(--muted)', 
                     borderColor: activeSubTab === 'export' ? 'var(--gold)' : 'transparent',
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -1647,7 +1823,7 @@ export default function PlayerPage() {
                 {activeSubTab === 'sync' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     <div>
-                      <span style={{ fontSize: '0.8rem', display: 'block', marginBottom: '4px', color: '#ccc' }}>Sync Delay</span>
+                      <span style={{ fontSize: '0.8rem', display: 'block', marginBottom: '4px', color: 'var(--muted)' }}>Sync Delay</span>
                       <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                         <button type="button" className="secondary-button" style={{ padding: '4px 8px', fontSize: '0.8rem', minHeight: '30px' }} onClick={() => setSubtitleOffset(prev => prev - 1.0)}>-1.0s</button>
                         <button type="button" className="secondary-button" style={{ padding: '4px 8px', fontSize: '0.8rem', minHeight: '30px' }} onClick={() => setSubtitleOffset(prev => prev - 0.5)}>-0.5s</button>
@@ -1665,7 +1841,7 @@ export default function PlayerPage() {
                 {activeSubTab === 'style' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <span style={{ fontSize: '0.8rem', color: '#ccc' }}>Subtitle Size (Custom Player Only)</span>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>Subtitle Size (Custom Player Only)</span>
                       <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                         <input 
                           type="range" 
@@ -1683,8 +1859,8 @@ export default function PlayerPage() {
                     </div>
 
                     <div>
-                      <span style={{ fontSize: '0.8rem', display: 'block', marginBottom: '4px', color: '#ccc' }}>Vertical Position</span>
-                      <select value={subPosition} onChange={(e) => setSubPosition(e.target.value)} style={{ width: '100%', padding: '8px', fontSize: '0.85rem', background: '#111', color: '#fff', border: '1px solid var(--gold)', borderRadius: '4px' }}>
+                      <span style={{ fontSize: '0.8rem', display: 'block', marginBottom: '4px', color: 'var(--muted)' }}>Vertical Position</span>
+                      <select value={subPosition} onChange={(e) => setSubPosition(e.target.value)} style={{ width: '100%', padding: '8px', fontSize: '0.85rem', background: 'var(--panel-soft)', color: 'var(--text)', border: '1px solid var(--gold)', borderRadius: '4px' }}>
                         <option value="">Default (Player Bottom)</option>
                         <optgroup label="Percentage from Top (VidSrc / Custom Player)">
                           <option value="90%">90% (Slightly Raised)</option>
@@ -1696,7 +1872,7 @@ export default function PlayerPage() {
                           <option value="50%">50% (Center Screen)</option>
                           <option value="10%">10% (Top of Screen)</option>
                         </optgroup>
-                        <optgroup label="Line Offset (Highly Recommended for Vidking)">
+                        <optgroup label="Line Offset (Some Providers)">
                           <option value="-2">Raised 1 Line (line:-2)</option>
                           <option value="-3">Raised 2 Lines (line:-3)</option>
                           <option value="-4">Raised 3 Lines (line:-4)</option>
@@ -1717,19 +1893,19 @@ export default function PlayerPage() {
                   !subtitleText ? (
                     <div style={{ padding: '20px', textAlign: 'center', color: '#888', border: '1px dashed rgba(255, 255, 255, 0.15)', borderRadius: '6px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ opacity: 0.5 }}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#ccc' }}>Subtitles Required</span>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--muted)' }}>Subtitles Required</span>
                       <p style={{ margin: 0, fontSize: '0.75rem', opacity: 0.8, maxWidth: '240px', lineHeight: '1.4' }}>Drift/stretch adjustment requires loaded subtitles. Please auto-fetch or upload a file first.</p>
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <span style={{ fontSize: '0.8rem', color: '#ccc' }}>Fix drifting subtitles. Adjust speed factor to stretch/shrink timings.</span>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>Fix drifting subtitles. Adjust speed factor to stretch/shrink timings.</span>
                       <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                         <input 
                           type="number" 
                           step="0.000001" 
                           value={timeStretchFactor} 
                           onChange={(e) => setTimeStretchFactor(e.target.value)} 
-                          style={{ flex: 1, padding: '6px 10px', fontSize: '0.85rem', background: '#111', color: '#fff', border: '1px solid var(--border)', borderRadius: '4px', minHeight: '36px' }}
+                          style={{ flex: 1, padding: '6px 10px', fontSize: '0.85rem', background: 'var(--panel-soft)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '4px', minHeight: '36px' }}
                         />
                         <button type="button" className="secondary-button" style={{ minHeight: '36px', fontSize: '0.8rem' }} onClick={() => setTimeStretchFactor('1.000000')}>Reset</button>
                       </div>
@@ -1746,16 +1922,16 @@ export default function PlayerPage() {
                   !subtitleText ? (
                     <div style={{ padding: '20px', textAlign: 'center', color: '#888', border: '1px dashed rgba(255, 255, 255, 0.15)', borderRadius: '6px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ opacity: 0.5 }}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#ccc' }}>Subtitles Required</span>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--muted)' }}>Subtitles Required</span>
                       <p style={{ margin: 0, fontSize: '0.75rem', opacity: 0.8, maxWidth: '240px', lineHeight: '1.4' }}>SDH cleaning and case conversion require loaded subtitles. Please auto-fetch or upload a file first.</p>
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      <span style={{ fontSize: '0.8rem', color: '#ccc' }}>Clean hearing-impaired SDH captions (e.g. `[music]`, `(gasp)`) or format text case.</span>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>Clean hearing-impaired SDH captions (e.g. `[music]`, `(gasp)`) or format text case.</span>
                       <button 
                         type="button" 
                         className="secondary-button" 
-                        style={{ fontSize: '0.85rem', padding: '8px', width: '100%', borderColor: 'var(--gold)', background: 'rgba(212, 175, 55, 0.05)' }} 
+                        style={{ fontSize: '0.85rem', padding: '8px', width: '100%', borderColor: 'var(--gold)', background: 'var(--accent-soft)' }} 
                         onClick={() => {
                           const cleaned = cleanSdhFromText(subtitleText);
                           setSubtitleText(cleaned);
@@ -1778,30 +1954,30 @@ export default function PlayerPage() {
                   !subtitleText ? (
                     <div style={{ padding: '20px', textAlign: 'center', color: '#888', border: '1px dashed rgba(255, 255, 255, 0.15)', borderRadius: '6px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ opacity: 0.5 }}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#ccc' }}>Subtitles Required</span>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--muted)' }}>Subtitles Required</span>
                       <p style={{ margin: 0, fontSize: '0.75rem', opacity: 0.8, maxWidth: '240px', lineHeight: '1.4' }}>Find & Replace requires loaded subtitles. Please auto-fetch or upload a file first.</p>
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <span style={{ fontSize: '0.8rem', color: '#ccc' }}>Find and replace terms within the loaded subtitles.</span>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>Find and replace terms within the loaded subtitles.</span>
                       <input 
                         type="text" 
                         placeholder="Find text..." 
                         value={findText} 
                         onChange={(e) => setFindText(e.target.value)} 
-                        style={{ padding: '6px 10px', fontSize: '0.85rem', background: '#111', color: '#fff', border: '1px solid var(--border)', borderRadius: '4px', minHeight: '36px' }}
+                        style={{ padding: '6px 10px', fontSize: '0.85rem', background: 'var(--panel-soft)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '4px', minHeight: '36px' }}
                       />
                       <input 
                         type="text" 
                         placeholder="Replace with..." 
                         value={replaceText} 
                         onChange={(e) => setReplaceText(e.target.value)} 
-                        style={{ padding: '6px 10px', fontSize: '0.85rem', background: '#111', color: '#fff', border: '1px solid var(--border)', borderRadius: '4px', minHeight: '36px' }}
+                        style={{ padding: '6px 10px', fontSize: '0.85rem', background: 'var(--panel-soft)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '4px', minHeight: '36px' }}
                       />
                       <button 
                         type="button" 
                         className="secondary-button" 
-                        style={{ fontSize: '0.85rem', padding: '8px', borderColor: 'var(--gold)', background: 'rgba(212, 175, 55, 0.05)' }} 
+                        style={{ fontSize: '0.85rem', padding: '8px', borderColor: 'var(--gold)', background: 'var(--accent-soft)' }} 
                         disabled={!findText}
                         onClick={() => {
                           const replaced = findAndReplaceInText(subtitleText, findText, replaceText);
@@ -1821,17 +1997,17 @@ export default function PlayerPage() {
                   !subtitleText ? (
                     <div style={{ padding: '20px', textAlign: 'center', color: '#888', border: '1px dashed rgba(255, 255, 255, 0.15)', borderRadius: '6px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ opacity: 0.5 }}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#ccc' }}>Subtitles Required</span>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--muted)' }}>Subtitles Required</span>
                       <p style={{ margin: 0, fontSize: '0.75rem', opacity: 0.8, maxWidth: '240px', lineHeight: '1.4' }}>Exporting requires loaded subtitles. Please auto-fetch or upload a file first.</p>
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <span style={{ fontSize: '0.8rem', color: '#ccc' }}>Download the customized subtitle file to your device in either WebVTT or SRT format.</span>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>Download the customized subtitle file to your device in either WebVTT or SRT format.</span>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <button 
                           type="button" 
                           className="secondary-button" 
-                          style={{ flex: 1, fontSize: '0.85rem', padding: '8px', borderColor: 'var(--gold)', background: 'rgba(212, 175, 55, 0.05)' }} 
+                          style={{ flex: 1, fontSize: '0.85rem', padding: '8px', borderColor: 'var(--gold)', background: 'var(--accent-soft)' }} 
                           onClick={() => downloadCustomSubtitle('vtt')}
                         >
                           💾 Download .VTT
@@ -1839,7 +2015,7 @@ export default function PlayerPage() {
                         <button 
                           type="button" 
                           className="secondary-button" 
-                          style={{ flex: 1, fontSize: '0.85rem', padding: '8px', borderColor: 'var(--gold)', background: 'rgba(212, 175, 55, 0.05)' }} 
+                          style={{ flex: 1, fontSize: '0.85rem', padding: '8px', borderColor: 'var(--gold)', background: 'var(--accent-soft)' }} 
                           onClick={() => downloadCustomSubtitle('srt')}
                         >
                           💾 Download .SRT
@@ -1858,7 +2034,9 @@ export default function PlayerPage() {
             <div className="output-header"><h2>Progress Events</h2><button className="secondary-button" type="button" onClick={() => setEvents([])}>Clear</button></div>
             <pre>{events.length > 0 ? events.join('\n\n') : 'Waiting for player events...'}</pre>
           </section>
-        </aside>
+            </aside>
+          </section>
+        )}
       </section>
 
       {recommendations.length > 0 && (
@@ -1904,8 +2082,8 @@ export default function PlayerPage() {
         </div>
         <div className="reviews-layout">
           {/* Write a Review Section */}
-          <div style={{ background: 'linear-gradient(135deg, #111622 0%, #080a0f 100%)', border: '1px solid var(--border-gold)', padding: '24px', position: 'relative' }}>
-            <h3 style={{ fontFamily: 'Cinzel, serif', color: 'var(--parchment)', fontSize: '1.2rem', marginBottom: '1.5rem', borderBottom: '1px solid rgba(212,175,55,0.2)', paddingBottom: '8px' }}>
+          <div style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '16px', padding: '24px', position: 'relative' }}>
+            <h3 style={{ fontFamily: 'var(--font-display)', color: 'var(--parchment)', fontSize: '1.2rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-soft)', paddingBottom: '8px' }}>
               Share Your Thoughts
             </h3>
             {isLoggedIn() ? (
@@ -1921,7 +2099,7 @@ export default function PlayerPage() {
                     placeholder="What did you think of this title? Writing style, pacing, acting..." 
                     value={reviewText} 
                     onChange={e => setReviewText(e.target.value)} 
-                    style={{ width: '100%', padding: '12px', borderRadius: '4px', border: '1px solid var(--border-gold)', background: 'rgba(0,0,0,0.4)', color: '#fff', fontSize: '0.9rem', resize: 'vertical' }}
+                    style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--panel-soft)', color: 'var(--text)', fontSize: '0.9rem', resize: 'vertical' }}
                   />
                 </div>
                 
@@ -1942,17 +2120,17 @@ export default function PlayerPage() {
 
           {/* User Reviews List Section */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: 'rgba(255,255,255,0.02)', padding: '16px 20px', border: '1px solid rgba(212,175,55,0.1)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: 'rgba(255,255,255,0.02)', padding: '16px 20px', border: '1px solid var(--border-soft)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontWeight: 'bold', color: 'var(--gold-light)' }}>User Rating</span>
-                <span style={{ fontFamily: 'Cinzel, serif', fontWeight: 'bold', color: 'var(--parchment)' }}>
+                <span style={{ fontFamily: 'var(--font-display)', fontWeight: 'bold', color: 'var(--parchment)' }}>
                   {averageRating ? `⭐ ${averageRating} / 5 (${reviews.length} review${reviews.length === 1 ? '' : 's'})` : 'No ratings yet'}
                 </span>
               </div>
               {tmdbRating && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '6px' }}>
                   <span style={{ fontWeight: 'bold', color: '#01b4e4' }}>TMDB Rating</span>
-                  <span style={{ fontFamily: 'Cinzel, serif', fontWeight: 'bold', color: '#fff' }}>
+                  <span style={{ fontFamily: 'var(--font-display)', fontWeight: 'bold', color: 'var(--text)' }}>
                     ⭐ {tmdbRating.average} / 10 ({tmdbRating.count.toLocaleString()} votes)
                   </span>
                 </div>

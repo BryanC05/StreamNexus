@@ -1,16 +1,21 @@
+import { favoriteTombstoneKey, historyTombstoneKey } from './lib/sync.js';
+
 // ==========================================
 // CONFIGURATION & CONSTANTS
 // ==========================================
 const TMDB_API_URL = "https://api.themoviedb.org/3";
 const TMDB_IMAGE_URL = "https://image.tmdb.org/t/p";
 const TMDB_CACHE_KEY = "freevid_tmdb_catalog_v2";
-const DEFAULT_TMDB_KEY = (typeof window !== 'undefined' && window.ENV?.TMDB_API_KEY) || (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_TMDB_API_KEY) || "";
+const DEFAULT_TMDB_KEY = import.meta.env?.VITE_TMDB_API_KEY || (typeof window !== 'undefined' && window.ENV?.TMDB_API_KEY) || "";
+const DEFAULT_SUBDL_KEY = import.meta.env?.VITE_SUBDL_API_KEY || (typeof window !== 'undefined' && window.ENV?.SUBDL_API_KEY) || "";
 const FAVORITES_KEY = "freevid_favorites_v1";
 const HISTORY_KEY = "freevid_history_v1";
 const PROGRESS_KEY = "freevid_progress_v1";
 const WATCH_TIME_KEY = "freevid_watchtime_v1";
 const SERVER_KEY = "freevid_server_v1";
 const EPISODE_PROGRESS_KEY = "freevid_episode_progress_v1";
+const TOMBSTONES_KEY = "freevid_tombstones_v1";
+const HISTORY_CLEARED_KEY = "freevid_history_cleared_v1";
 const TMDB_PAGE_COUNT = 25;
 const TMDB_BATCH_SIZE = 5;
 
@@ -23,7 +28,7 @@ const catalog = {
       id: "1078605",
       title: "Weapons",
       year: "2025",
-      poster: "https://image.tmdb.org/t/p/w342/rysFRTQL7D7YuPH9YHrNt3q35FJ.jpg",
+      poster: "https://image.tmdb.org/t/p/w342/cpf7vsRZ0MYRQcnLWteD5jK9ymT.jpg",
       backdrop: "https://image.tmdb.org/t/p/w1280/tCQfubckzzcuCbsGugkpLhfjS5z.jpg",
     },
     {
@@ -107,7 +112,7 @@ const catalog = {
       id: "13",
       title: "Forrest Gump",
       year: "1994",
-      poster: "https://image.tmdb.org/t/p/w342/arw2vcBveWOVZr6pxd9XTd1TdQaR.jpg",
+      poster: "https://image.tmdb.org/t/p/w342/saHP97rTPS5eLmrLQEcANmKrsFl.jpg",
       backdrop: "https://image.tmdb.org/t/p/w1280/3h1JZGDhZ8nzxdgvkxha0qBqi05.jpg",
     },
     {
@@ -178,7 +183,7 @@ const catalog = {
       title: "Mad Max: Fury Road",
       year: "2015",
       poster: "https://image.tmdb.org/t/p/w342/hA2ple9q4qnwxp3hKVNhroipsir.jpg",
-      backdrop: "https://image.tmdb.org/t/p/w1280/phszHPFVhPHhMZgo0fWTKBDQsJA.jpg",
+      backdrop: "https://image.tmdb.org/t/p/w1280/gqrnQA6Xppdl8vIb2eJc58VC1tW.jpg",
     },
     {
       id: "324552",
@@ -331,7 +336,7 @@ const catalog = {
       season: 1,
       episode: 1,
       poster: "https://image.tmdb.org/t/p/w342/vHqeLzYl3dEAutojCO26g0LIkom.jpg",
-      backdrop: "https://image.tmdb.org/t/p/w1280/a0iM3Fus9vO4V7r4LpiQQ5mnOxJ.jpg",
+      backdrop: "https://image.tmdb.org/t/p/w1280/jIArNHIekrCSVgdMbKPAXpPY03Y.jpg",
     },
     {
       id: "42009",
@@ -339,7 +344,7 @@ const catalog = {
       year: "2011",
       season: 1,
       episode: 1,
-      poster: "https://image.tmdb.org/t/p/w342/7PRddO3z7mcPi21nZTCMGShAyy1.jpg",
+      poster: "https://image.tmdb.org/t/p/w342/seN6rRfN0I6n8iDXjlSMk1QjNcq.jpg",
       backdrop: "https://image.tmdb.org/t/p/w1280/5UaYsGZOFhjFDwQh6GuLjjA1WlF.jpg",
     },
     {
@@ -358,7 +363,7 @@ const catalog = {
       season: 1,
       episode: 1,
       poster: "https://image.tmdb.org/t/p/w342/7WTsnHkbA0FaG6R9twfFde0I9hl.jpg",
-      backdrop: "https://image.tmdb.org/t/p/w1280/9S6nYIsKPQZV5YLGjIuNqPUgB70.jpg",
+      backdrop: "https://image.tmdb.org/t/p/w1280/8rvLEmdI4gLrMO1rLqbNdnNcPFE.jpg",
     },
     {
       id: "136315",
@@ -385,7 +390,7 @@ const catalog = {
       season: 1,
       episode: 1,
       poster: "https://image.tmdb.org/t/p/w342/fqldf2t8ztc9aiwn3k6mlX3tvRT.jpg",
-      backdrop: "https://image.tmdb.org/t/p/w1280/rndAzE3O3yOSbagXjG1tR5Uwh9x.jpg",
+      backdrop: "https://image.tmdb.org/t/p/w1280/5cvnxEHT3e39DvT6ARw4GNCFrB0.jpg",
     },
     {
       id: "37854",
@@ -458,46 +463,6 @@ function writeStore(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
-function showVanillaToast(message, type = 'info', duration = 5000) {
-  if (typeof document === 'undefined') return;
-  let container = document.querySelector('.toast-container');
-  if (!container) {
-    container = document.createElement('div');
-    container.className = 'toast-container';
-    document.body.appendChild(container);
-  }
-  const toast = document.createElement('div');
-  toast.className = `toast-item toast-${type}`;
-  toast.style.setProperty('--duration', `${duration}ms`);
-  
-  let icon = 'ℹ️';
-  if (type === 'success') icon = '✓';
-  else if (type === 'error' || type === 'warning') icon = '⚠️';
-  
-  toast.innerHTML = `
-    <span class="toast-icon">${icon}</span>
-    <p class="toast-message">${message}</p>
-    <button type="button" class="toast-close">&times;</button>
-  `;
-  container.appendChild(toast);
-  
-  const closeBtn = toast.querySelector('.toast-close');
-  const dismiss = () => {
-    toast.style.animation = 'toast-slide-out 0.3s ease forwards';
-    setTimeout(() => {
-      toast.remove();
-    }, 300);
-  };
-  
-  closeBtn.addEventListener('click', dismiss);
-  
-  let dismissTimer = setTimeout(dismiss, duration);
-  toast.addEventListener('mouseenter', () => clearTimeout(dismissTimer));
-  toast.addEventListener('mouseleave', () => {
-    dismissTimer = setTimeout(dismiss, 3000);
-  });
-}
-
 function getContentKey(entry) {
   if (entry.mediaType === "tv") {
     return `tv:${entry.id}:s${entry.season || 1}:e${entry.episode || 1}`;
@@ -568,6 +533,35 @@ function addGlobalWatchTime(seconds) {
   writeStore(WATCH_TIME_KEY, getGlobalWatchTime() + seconds);
 }
 
+function getTombstones() {
+  return readStore(TOMBSTONES_KEY, {});
+}
+
+function addTombstone(key) {
+  if (!key) return;
+  const tombstones = getTombstones();
+  tombstones[key] = Date.now();
+  const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
+  const pruned = Object.entries(tombstones)
+    .filter(([, timestamp]) => Number(timestamp) > cutoff)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 500);
+  writeStore(TOMBSTONES_KEY, Object.fromEntries(pruned));
+}
+
+function removeTombstone(key) {
+  if (!key) return;
+  const tombstones = getTombstones();
+  if (key in tombstones) {
+    delete tombstones[key];
+    writeStore(TOMBSTONES_KEY, tombstones);
+  }
+}
+
+function getHistoryClearedAt() {
+  return Number(readStore(HISTORY_CLEARED_KEY, 0)) || 0;
+}
+
 function isFavorite(entry) {
   const key = getContentKey(entry);
   return getFavorites().some((item) => getContentKey(item) === key);
@@ -582,6 +576,12 @@ function toggleFavorite(entry) {
     ? favorites.filter((item) => getContentKey(item) !== key)
     : [{ ...normalized, savedAt: Date.now() }, ...favorites];
 
+  if (exists) {
+    addTombstone(favoriteTombstoneKey(normalized));
+  } else {
+    removeTombstone(favoriteTombstoneKey(normalized));
+  }
+
   writeStore(FAVORITES_KEY, next);
   if (isLoggedIn()) apiSyncPush().catch(() => {});
   return !exists;
@@ -590,6 +590,7 @@ function toggleFavorite(entry) {
 function saveHistory(entry) {
   const normalized = getTitleFromEntry(entry);
   const key = getContentKey(normalized);
+  removeTombstone(historyTombstoneKey(normalized));
   const history = getHistory();
   
   // For TV shows: group by series ID only, update to latest episode watched
@@ -631,12 +632,23 @@ function saveHistory(entry) {
 
 function clearAllHistory() {
   writeStore(HISTORY_KEY, []);
+  writeStore(HISTORY_CLEARED_KEY, Date.now());
+  const tombstones = getTombstones();
+  let changed = false;
+  for (const key of Object.keys(tombstones)) {
+    if (key.startsWith('hist:')) {
+      delete tombstones[key];
+      changed = true;
+    }
+  }
+  if (changed) writeStore(TOMBSTONES_KEY, tombstones);
   if (isLoggedIn()) apiSyncPush().catch(() => {});
 }
 
 function deleteFromHistory(entry) {
   const normalized = getTitleFromEntry(entry);
   const key = getContentKey(normalized);
+  addTombstone(historyTombstoneKey(normalized));
   const history = readStore(HISTORY_KEY, []);
   
   const filtered = history.filter((item) => {
@@ -1009,48 +1021,29 @@ async function fetchRecommendations(mediaType, tmdbId, credential) {
 
 // Feature #11: Personalized Recommendations based on watch history
 async function getPersonalizedRecommendations(type = 'all', limit = 20) {
-  const HISTORY_KEY = 'streamnexus_history';
-  const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
-  
+  const history = getHistory();
+
   if (history.length === 0) {
     return [];
   }
-  
-  // Analyze watch history to get preferred genres and actors
+
+  const watchedIds = new Set(history.map(entry => String(entry.id)));
   const genreCount = {};
-  const actorCount = {};
-  const watchedIds = new Set();
-  
   history.forEach(entry => {
-    watchedIds.add(String(entry.id));
     if (entry.genreIds) {
       entry.genreIds.forEach(g => {
         genreCount[g] = (genreCount[g] || 0) + 1;
       });
     }
-    // Note: actor data might not be in history, but we can use it if available
-    if (entry.credits && entry.credits.cast) {
-      entry.credits.cast.slice(0, 5).forEach(actor => {
-        actorCount[actor.id] = (actorCount[actor.id] || 0) + 1;
-      });
-    }
   });
-  
-  // Get top genres (sorted by frequency)
+
   const topGenres = Object.entries(genreCount)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 3)
     .map(([id]) => Number(id));
-  
-  // Get top actors (sorted by frequency)
-  const topActors = Object.entries(actorCount)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([id]) => Number(id));
-  
-  // Fetch recommendations from TMDB for top genres
+
   let recommendations = [];
-  const credential = window.ENV?.TMDB_API_KEY || (typeof import.meta !== 'undefined' && import.meta.env.VITE_TMDB_API_KEY);
+  const credential = DEFAULT_TMDB_KEY;
   
   if (credential && topGenres.length > 0) {
     try {
@@ -1129,8 +1122,8 @@ async function getPersonalizedRecommendations(type = 'all', limit = 20) {
 }
 
 async function autoFetchSubtitles(tmdbId, mediaType, season, episode) {
-  const apiKey = (typeof window !== 'undefined' && window.ENV?.SUBDL_API_KEY) || (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SUBDL_API_KEY) || "";
-  if (!apiKey) throw new Error("SubDL API key not configured in env.js");
+  const apiKey = DEFAULT_SUBDL_KEY;
+  if (!apiKey) throw new Error("SubDL API key not configured (VITE_SUBDL_API_KEY)");
 
   const url = new URL("https://api.subdl.com/api/v1/subtitles");
   url.searchParams.set("api_key", apiKey);
@@ -1416,967 +1409,6 @@ async function uploadSubtitleToTempHost(text, filename) {
 }
 
 // ==========================================
-// UI: SELECTION PAGE
-// ==========================================
-function buildPlayerHref(item, mediaType) {
-  const params = new URLSearchParams({
-    type: mediaType,
-    id: item.id,
-    title: item.title,
-  });
-
-  if (mediaType === "tv") {
-    params.set("season", String(item.season || 1));
-    params.set("episode", String(item.episode || 1));
-  }
-
-  const saved = getSavedProgress({ ...item, mediaType });
-  if (saved?.currentTime && (!saved.progress || saved.progress < 95)) {
-    params.set("progress", String(Math.floor(saved.currentTime)));
-  }
-
-  return `player.html?${params.toString()}`;
-}
-
-function initSelectionPage() {
-  const catalogGrid = document.querySelector("#catalogGrid");
-  const featuredCard = document.querySelector("#featuredCard");
-  const catalogTitle = document.querySelector("#catalogTitle");
-  const catalogTypeInputs = document.querySelectorAll("input[name='catalogType']");
-  const catalogStatus = document.querySelector("#catalogStatus");
-
-  if (!catalogGrid || !featuredCard) {
-    return;
-  }
-
-  const tvStatsObserver = new IntersectionObserver((entries, observer) => {
-    entries.forEach(async (entry) => {
-      if (entry.isIntersecting) {
-        const card = entry.target;
-        const tmdbId = card.dataset.tvId;
-        const year = card.dataset.year;
-        const metaSpan = card.querySelector('.dynamic-tv-meta');
-        
-        if (tmdbId && metaSpan && DEFAULT_TMDB_KEY) {
-          const stats = await fetchTvStats(tmdbId, DEFAULT_TMDB_KEY);
-          if (stats) {
-            metaSpan.innerHTML = `${stats} &middot; ${year}`;
-          }
-        }
-        observer.unobserve(card); // Unobserve so it only fetches once
-      }
-    });
-  }, { rootMargin: "300px" }); // Starts fetching right before the poster scrolls into view
-
-  function getCatalogType() {
-    return document.querySelector("input[name='catalogType']:checked").value;
-  }
-
-  function renderFeatured(item, mediaType) {
-    const href = buildPlayerHref(item, mediaType);
-    const year = item.year || "Unknown year";
-    const meta = mediaType === "tv" ? formatTvTotals(item) : "Movie";
-    featuredCard.style.backgroundImage = item.backdrop
-      ? `linear-gradient(90deg, rgba(17, 19, 21, 0.92), rgba(17, 19, 21, 0.46)), url("${item.backdrop}")`
-      : "linear-gradient(90deg, rgba(17, 19, 21, 0.92), rgba(17, 19, 21, 0.46))";
-    featuredCard.innerHTML = `
-      <div class="featured-content">
-        <p class="eyebrow">Featured ${mediaType === "tv" ? "TV Show" : "Movie"}</p>
-        <h2>${item.title}</h2>
-        <p id="featuredMeta">${meta} &middot; ${year}</p>
-        <a class="primary-link" href="${href}">Watch Now</a>
-      </div>
-    `;
-
-    if (mediaType === "tv" && DEFAULT_TMDB_KEY) {
-      fetchTvStats(item.id, DEFAULT_TMDB_KEY).then((stats) => {
-        const metaEl = featuredCard.querySelector("#featuredMeta");
-        if (stats && metaEl) {
-          metaEl.innerHTML = `${stats} &middot; ${year}`;
-        }
-      });
-    }
-  }
-
-  function renderCatalog() {
-    const catalogType = getCatalogType();
-    const activeCatalog = getActiveCatalog();
-    const items = activeCatalog[catalogType];
-    catalogTitle.textContent = catalogType === "tv" ? `TV Shows (${items.length})` : `Movies (${items.length})`;
-    catalogGrid.innerHTML = "";
-    renderFeatured(items[0], catalogType);
-
-    items.forEach((item) => {
-      const href = buildPlayerHref(item, catalogType);
-      const year = item.year || "Unknown year";
-      const meta = catalogType === "tv" ? formatTvTotals(item) : "Movie";
-      const favoriteEntry = { ...item, mediaType: catalogType };
-      const saved = isFavorite(favoriteEntry);
-      const card = document.createElement("article");
-      card.className = "poster-card";
-      if (catalogType === "tv") {
-        card.dataset.tvId = item.id;
-        card.dataset.year = year;
-      }
-      card.innerHTML = `
-        <span class="poster-media">
-          <a class="poster-image-link" href="${href}">
-            <img src="${item.poster}" alt="${item.title} poster" loading="lazy" onerror="this.onerror=null; this.removeAttribute('src');">
-          </a>
-          <button class="favorite-button${saved ? " is-active" : ""}" type="button" aria-pressed="${saved}" data-favorite-key="${getContentKey(favoriteEntry)}">
-            ${saved ? "Saved" : "Favorite"}
-          </button>
-        </span>
-        <a class="poster-link" href="${href}">
-          <span class="poster-copy">
-            <strong>${item.title}</strong>
-            <span class="${catalogType === "tv" ? 'dynamic-tv-meta' : ''}">${meta} &middot; ${year}</span>
-          </span>
-        </a>
-      `;
-      card.querySelector(".favorite-button").addEventListener("click", () => {
-        toggleFavorite(favoriteEntry);
-        renderCatalog();
-      });
-      catalogGrid.append(card);
-      if (catalogType === "tv") {
-        tvStatsObserver.observe(card);
-      }
-    });
-  }
-
-  function updateStatus() {
-    const cached = getCachedCatalog();
-    if (!cached) {
-      catalogStatus.textContent = `Using the built-in catalog: ${catalog.movie.length} movies and ${catalog.tv.length} TV shows. Add TMDB to load popular titles.`;
-      return;
-    }
-
-    catalogStatus.textContent = `Loaded ${cached.movie.length} movies and ${cached.tv.length} TV shows from TMDB.`;
-  }
-
-  async function loadRemoteCatalog(credential) {
-    const trimmed = credential.trim();
-
-    if (!trimmed) {
-      catalogStatus.textContent = "No TMDB API Key found. Using built-in catalog.";
-      return;
-    }
-
-    catalogStatus.textContent = "Loading popular movies and TV shows from TMDB. This may take a moment...";
-    const remoteCatalog = await fetchPopularCatalog(trimmed);
-    runtimeCatalogCache = remoteCatalog;
-    
-    try {
-      localStorage.setItem(TMDB_CACHE_KEY, JSON.stringify(remoteCatalog));
-    } catch (err) {
-      console.warn("Catalog too large to cache in localStorage. Operating from memory.");
-    }
-
-    updateStatus();
-    renderCatalog();
-  }
-
-  catalogTypeInputs.forEach((input) => {
-    input.addEventListener("change", renderCatalog);
-  });
-
-  updateStatus();
-  renderCatalog();
-
-  if (DEFAULT_TMDB_KEY && !getCachedCatalog()) {
-    loadRemoteCatalog(DEFAULT_TMDB_KEY).catch((error) => {
-      catalogStatus.textContent = error.message;
-    });
-  }
-}
-
-// ==========================================
-// UI: PLAYER PAGE
-// ==========================================
-function getMediaType() {
-  return document.querySelector("input[name='mediaType']:checked").value;
-}
-
-function setMediaType(mediaType) {
-  const input = document.querySelector(`input[name='mediaType'][value='${mediaType}']`);
-
-  if (input) {
-    input.checked = true;
-  }
-}
-
-function buildEmbedUrl() {
-  const mediaType = getMediaType();
-  const tmdbIdInput = document.querySelector("#tmdbId");
-  const serverInput = document.querySelector("#serverProvider");
-  const baseUrl = serverInput ? serverInput.value : "https://vidsync.live/embed";
-  const seasonInput = document.querySelector("#season");
-  const episodeInput = document.querySelector("#episode");
-  const colorInput = document.querySelector("#color");
-  const progressInput = document.querySelector("#progress");
-  const autoPlayInput = document.querySelector("#autoPlay");
-  const subUrlInput = document.querySelector("#subUrl");
-  const tmdbId = cleanNumber(tmdbIdInput.value, 1078605);
-  const params = new URLSearchParams();
-  const color = colorInput.value.replace("#", "");
-  const progress = Number.parseInt(progressInput.value, 10);
-
-  let path = `${baseUrl}/movie/${tmdbId}`;
-
-  if (mediaType === "tv") {
-    const season = cleanNumber(seasonInput.value, 1);
-    const episode = cleanNumber(episodeInput.value, 1);
-    path = `${baseUrl}/tv/${tmdbId}/${season}/${episode}`;
-  }
-
-  if (color) {
-    params.set("color", color);
-  }
-
-  if (autoPlayInput.checked) {
-    params.set("autoPlay", "true");
-  }
-
-  if (Number.isFinite(progress) && progress > 0) {
-    params.set("progress", String(progress));
-  }
-
-  if (subUrlInput && subUrlInput.value) {
-    params.set("sub_url", subUrlInput.value);
-    params.set("sub_default", "true");
-  }
-
-  const query = params.toString();
-  return query ? `${path}?${query}` : path;
-}
-
-function buildIframeCode(url) {
-  return `<iframe
-  src="${url}"
-  width="100%"
-  height="600"
-  frameborder="0"
-  allow="autoplay; fullscreen"
-  allowfullscreen>
-</iframe>`;
-}
-
-function initPlayerPage() {
-  const form = document.querySelector("#embedForm");
-  const playerFrame = document.querySelector("#playerFrame");
-
-  if (!form || !playerFrame) {
-    return;
-  }
-
-  const pageParams = new URLSearchParams(window.location.search);
-  const mediaType = pageParams.get("type") === "tv" ? "tv" : "movie";
-  const id = pageParams.get("id") || "1078605";
-  const selectedTitle = findTitle(mediaType, id);
-  const title = pageParams.get("title") || selectedTitle?.title || "Player";
-  const eventLog = document.querySelector("#eventLog");
-  const tvOptions = document.querySelectorAll(".tv-option");
-  const embedUrlOutput = document.querySelector("#embedUrl");
-  const iframeCodeOutput = document.querySelector("#iframeCode");
-  const playerTitle = document.querySelector("#playerTitle");
-  const playerMeta = document.querySelector("#playerMeta");
-  const serverProviderInput = document.querySelector("#serverProvider");
-  const tmdbIdInput = document.querySelector("#tmdbId");
-  const seasonInput = document.querySelector("#season");
-  const episodeInput = document.querySelector("#episode");
-  const progressInput = document.querySelector("#progress");
-  const findSubtitlesBtn = document.querySelector("#findSubtitlesBtn");
-  const autoFetchBtn = document.querySelector("#autoFetchBtn");
-  const reloadPreviewButton = document.querySelector("#reloadPreview");
-  const clearEventsButton = document.querySelector("#clearEvents");
-  const favoritePlayerButton = document.querySelector("#favoritePlayer");
-  const lightsOutBtn = document.querySelector("#lightsOutBtn");
-  const lightsOutOverlay = document.querySelector("#lightsOutOverlay");
-  const playerShell = document.querySelector(".player-shell");
-  const copyButtons = document.querySelectorAll("[data-copy-target]");
-  let eventEntries = [];
-
-  let currentTvSeasons = [];
-  let currentTvId = null;
-  let currentSeasonRendered = null;
-  let currentTmdbIdRendered = null;
-  let currentEpisodeRendered = null;
-  let fetchSeasonsError = null;
-  let currentContentKeyRendered = null;
-  let lastRecordedTime = null;
-
-  const episodeListContainer = document.createElement("div");
-  episodeListContainer.id = "episodeListContainer";
-  episodeListContainer.style.width = "100%";
-  episodeListContainer.style.marginTop = "2rem";
-  form.insertAdjacentElement("afterend", episodeListContainer);
-
-  function adjustSelectOptions(selectEl, maxVal, intendedValue) {
-    const currentCount = selectEl.options.length;
-    const targetValue = intendedValue || Number(selectEl.value) || 1;
-
-    if (currentCount === 0 && maxVal > 0) {
-      for (let i = 1; i <= maxVal; i++) {
-        const opt = document.createElement("option");
-        opt.value = i;
-        opt.textContent = i;
-        selectEl.appendChild(opt);
-      }
-      selectEl.value = targetValue <= maxVal ? String(targetValue) : String(maxVal);
-      return;
-    }
-
-    if (currentCount === maxVal) return;
-
-    const currentValue = Number(selectEl.value) || targetValue;
-
-    if (currentCount < maxVal) {
-      for (let i = currentCount + 1; i <= maxVal; i++) {
-        const opt = document.createElement("option");
-        opt.value = i;
-        opt.textContent = i;
-        selectEl.appendChild(opt);
-      }
-    } else {
-      while (selectEl.options.length > maxVal) {
-        selectEl.remove(selectEl.options.length - 1);
-      }
-    }
-
-    selectEl.value = currentValue > maxVal ? String(maxVal) : String(currentValue);
-  }
-
-  function updateSeasonAndEpisodeConstraints() {
-    if (getMediaType() !== "tv") return;
-
-    const tmdbId = tmdbIdInput.value.trim();
-    if (currentTvId !== tmdbId) {
-      currentTvId = tmdbId;
-      currentTvSeasons = [];
-      fetchTvSeasons(tmdbId);
-    }
-
-    let maxSeasons = 1;
-    let maxEpisodes = 1;
-    const currentSeason = Number(seasonInput.value) || Number(seasonInput.dataset.tempValue) || 1;
-
-    if (currentTvSeasons.length > 0) {
-      const regularSeasons = currentTvSeasons.filter((s) => s.season_number > 0);
-      maxSeasons = regularSeasons.length > 0 ? Math.max(...regularSeasons.map((s) => s.season_number)) : 1;
-
-      const seasonData = currentTvSeasons.find((s) => s.season_number === currentSeason);
-      if (seasonData) {
-        maxEpisodes = seasonData.episode_count || 1;
-      }
-    } else {
-      const entry = getCurrentEntry();
-      maxSeasons = entry.totalSeasons || 1;
-      maxEpisodes = entry.totalEpisodes ? Math.max(1, Math.floor(entry.totalEpisodes / maxSeasons)) : 99;
-    }
-
-    if (seasonInput.tagName === "SELECT") {
-      adjustSelectOptions(seasonInput, maxSeasons, currentSeason);
-    } else {
-      seasonInput.max = maxSeasons;
-      seasonInput.min = 1;
-      if (Number(seasonInput.value) > maxSeasons) seasonInput.value = maxSeasons;
-    }
-
-    const currentEpisode = Number(episodeInput.value) || Number(episodeInput.dataset.tempValue) || 1;
-    if (episodeInput.tagName === "SELECT") {
-      adjustSelectOptions(episodeInput, maxEpisodes, currentEpisode);
-    } else {
-      episodeInput.max = maxEpisodes;
-      episodeInput.min = 1;
-      if (Number(episodeInput.value) > maxEpisodes) episodeInput.value = maxEpisodes;
-    }
-  }
-
-  async function fetchTvSeasons(tmdbId) {
-    const credential = DEFAULT_TMDB_KEY;
-    if (!credential) return;
-
-    fetchSeasonsError = null;
-    try {
-      const url = new URL(`${TMDB_API_URL}/tv/${tmdbId}`);
-      url.searchParams.set("language", "en-US");
-      if (!credential.startsWith("ey")) {
-        url.searchParams.set("api_key", credential);
-      }
-
-      const response = await fetch(url, { headers: getTmdbHeaders(credential) });
-      if (response.ok) {
-        const data = await response.json();
-        if (data && data.seasons && currentTvId === String(data.id)) {
-          currentTvSeasons = data.seasons;
-          currentSeasonRendered = null; // Force episodes list to re-render
-          
-          // Dynamically update the player header with the exact show info!
-          const sCount = data.number_of_seasons || 0;
-          const eCount = data.number_of_episodes || 0;
-          if (sCount && eCount) {
-            playerMeta.textContent = `${sCount} Season${sCount === 1 ? "" : "s"} | ${eCount} Episode${eCount === 1 ? "" : "s"}`;
-          }
-          if (data.name) {
-            playerTitle.textContent = data.name;
-          }
-
-          updateOutputs(); // Refreshes URL correctly based on verified constraints
-        }
-      } else {
-        fetchSeasonsError = response.status === 401 ? 'invalid_key' : 'not_found';
-        currentSeasonRendered = null;
-        updateOutputs();
-      }
-    } catch (err) {
-      console.error("Failed to fetch accurate TV seasons:", err);
-      fetchSeasonsError = 'network_error';
-      currentSeasonRendered = null;
-      updateOutputs();
-    }
-  }
-
-  async function fetchTvEpisodesDetails(tmdbId, seasonNumber) {
-    const credential = DEFAULT_TMDB_KEY;
-    if (!credential) return null;
-
-    try {
-      const url = new URL(`${TMDB_API_URL}/tv/${tmdbId}/season/${seasonNumber}`);
-      url.searchParams.set("language", "en-US");
-      if (!credential.startsWith("ey")) {
-        url.searchParams.set("api_key", credential);
-      }
-
-      const response = await fetch(url, { headers: getTmdbHeaders(credential) });
-      if (response.ok) {
-        return await response.json();
-      }
-    } catch (err) {
-      console.error("Failed to fetch accurate TV episodes:", err);
-    }
-    return null;
-  }
-
-  async function renderEpisodesList(tmdbId, currentSeason, currentEpisode) {
-    const credential = DEFAULT_TMDB_KEY;
-
-    currentTmdbIdRendered = tmdbId;
-    currentSeasonRendered = currentSeason;
-    currentEpisodeRendered = currentEpisode;
-
-    if (!credential) {
-      episodeListContainer.innerHTML = `
-        <div style='padding: 1.5rem; text-align: center; border: 1px dashed #444; border-radius: 8px; color: #aaa;'>
-          <strong>Episodes List Unavailable</strong><br>
-          To view episode names and thumbnails, please add a valid TMDB API Key to your <code>env.js</code> file.
-        </div>
-      `;
-      return;
-    }
-
-    if (fetchSeasonsError) {
-      let errorTitle = "Failed to load season data";
-      let errorDesc = "Please check that your TMDB API Key is valid and try again.";
-
-      if (fetchSeasonsError === 'invalid_key') {
-         errorTitle = "Invalid API Key";
-         errorDesc = "TMDB rejected this key. Please make sure your <code>env.js</code> contains an actual TMDB API Key (or Read Access Token).";
-      } else if (fetchSeasonsError === 'not_found') {
-         errorTitle = "TV Show Not Found";
-         errorDesc = "TMDB could not find a TV show with this ID. <strong>Note: TMDB uses completely different IDs for Movies and TV Shows!</strong> If you are trying to watch a movie, please select 'Movie' instead of 'TV Show' above.";
-      }
-
-      episodeListContainer.innerHTML = `
-        <div style='padding: 1.5rem; text-align: center; border: 1px dashed #ff4444; border-radius: 8px; color: #ff6b6b;'>
-          <strong>${errorTitle}</strong><br>${errorDesc}
-        </div>
-      `;
-      return;
-    }
-
-    if (currentTvSeasons.length === 0) {
-      episodeListContainer.innerHTML = "<div style='padding: 1.5rem; text-align: center; color: #aaa;'>Loading seasons and episodes...</div>";
-      return;
-    }
-
-    const seasonOptions = currentTvSeasons
-      .filter((s) => s.season_number > 0)
-      .map((s) => `<option value="${s.season_number}" ${s.season_number === currentSeason ? "selected" : ""}>Season ${s.season_number}</option>`)
-      .join("");
-
-    episodeListContainer.innerHTML = `
-      <style>
-        .episodes-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
-        .episode-card-btn { display: flex; gap: 1rem; padding: 0.75rem; border-radius: 8px; cursor: pointer; background: #1a1a1a; transition: all 0.2s; text-align: left; width: 100%; border: 1px solid #333; color: inherit; font-family: inherit; align-items: flex-start; }
-        .episode-card-btn:hover { background: #2a2a2a; border-color: #555; }
-        .episode-card-btn.is-active { background: #222; border-color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-        .episode-card-btn img { width: 120px; height: 68px; object-fit: cover; border-radius: 4px; flex-shrink: 0; background: #333; }
-        .episode-card-btn .placeholder-img { width: 120px; height: 68px; background: #333; border-radius: 4px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: #666; }
-        .episode-card-btn h4 { margin: 0 0 0.25rem 0; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #eee; }
-        .episode-card-btn p { margin: 0; font-size: 0.8rem; color: #aaa; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4; }
-        .visual-season-select { padding: 0.5rem; border-radius: 4px; background: #222; color: #fff; border: 1px solid #444; font-size: 1rem; cursor: pointer; }
-      </style>
-      <div class="episodes-section">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-          <h3 style="margin: 0; font-size: 1.25rem;">Episodes</h3>
-          <select id="visualSeasonSelect" class="visual-season-select">
-            ${seasonOptions}
-          </select>
-        </div>
-        <div id="episodesGrid" class="episodes-grid">
-          <div style="padding: 1.5rem; color: #aaa;">Loading episodes for Season ${currentSeason}...</div>
-        </div>
-      </div>
-    `;
-
-    const visualSeasonSelect = document.querySelector("#visualSeasonSelect");
-    if (visualSeasonSelect) {
-      visualSeasonSelect.addEventListener("change", (e) => {
-        seasonInput.value = e.target.value;
-        seasonInput.dataset.tempValue = e.target.value;
-        episodeInput.value = "1";
-        episodeInput.dataset.tempValue = "1";
-        updateOutputs({ refreshFrame: true });
-      });
-    }
-
-    const seasonData = await fetchTvEpisodesDetails(tmdbId, currentSeason);
-    const grid = document.querySelector("#episodesGrid");
-    if (!grid) return; 
-
-    if (seasonData && seasonData.episodes) {
-      if (seasonData.episodes.length === 0) {
-        grid.innerHTML = "<div style='color: #aaa;'>No episodes found for this season.</div>";
-        return;
-      }
-      
-      grid.innerHTML = seasonData.episodes.map((ep) => {
-        const img = ep.still_path ? `${TMDB_IMAGE_URL}/w342${ep.still_path}` : "";
-        const isActive = ep.episode_number === currentEpisode;
-        return `
-          <button type="button" class="episode-card-btn ${isActive ? 'is-active' : ''}" data-episode="${ep.episode_number}">
-            ${img ? `<img src="${img}" alt="Episode ${ep.episode_number}" loading="lazy">` : `<div class="placeholder-img">No Image</div>`}
-            <div style="overflow: hidden;">
-              <h4>${ep.episode_number}. ${ep.name || 'TBA'}</h4>
-              <p>${ep.overview || "No description available."}</p>
-            </div>
-          </button>
-        `;
-      }).join("");
-
-      grid.querySelectorAll(".episode-card-btn").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          episodeInput.value = btn.dataset.episode;
-          episodeInput.dataset.tempValue = btn.dataset.episode;
-          updateOutputs({ refreshFrame: true });
-          
-          playerFrame.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        });
-      });
-    } else {
-      grid.innerHTML = "<div style='color: #ff6b6b;'>Could not load episodes. Please check your TMDB API Key.</div>";
-    }
-  }
-
-  function updateActiveEpisodeCard(currentEpisode) {
-    currentEpisodeRendered = currentEpisode;
-    const grid = document.querySelector("#episodesGrid");
-    if (!grid) return;
-    
-    grid.querySelectorAll(".episode-card-btn").forEach((btn) => {
-      const isActive = Number(btn.dataset.episode) === currentEpisode;
-      btn.classList.toggle("is-active", isActive);
-    });
-  }
-
-  function getCurrentEntry() {
-    const currentMediaType = getMediaType();
-    return getTitleFromEntry({
-      id: tmdbIdInput.value,
-      mediaType: currentMediaType,
-      title,
-      season: seasonInput.value,
-      episode: episodeInput.value,
-    });
-  }
-
-  function syncFavoriteButton() {
-    const currentEntry = getCurrentEntry();
-    const saved = isFavorite(currentEntry);
-    favoritePlayerButton.textContent = saved ? "Saved" : "Favorite";
-    favoritePlayerButton.classList.toggle("is-active", saved);
-    favoritePlayerButton.setAttribute("aria-pressed", String(saved));
-  }
-
-  function syncTvControls() {
-    const isTv = getMediaType() === "tv";
-    tvOptions.forEach((option) => {
-      option.hidden = !isTv;
-    });
-
-    tmdbIdInput.placeholder = isTv ? "TV Show ID (e.g., 1396)" : "Movie ID (e.g., 157336)";
-
-    const parentLabel = tmdbIdInput.closest("label");
-    if (parentLabel) {
-      const span = parentLabel.querySelector("span");
-      if (span) span.textContent = isTv ? "TMDB TV Show ID" : "TMDB Movie ID";
-    }
-  }
-
-  function updateOutputs({ refreshFrame = false } = {}) {
-    syncTvControls();
-    syncFavoriteButton();
-    updateSeasonAndEpisodeConstraints();
-
-    const currentEntry = getCurrentEntry();
-    const newContentKey = getContentKey(currentEntry);
-    const isFirstLoadOrChange = !currentContentKeyRendered || currentContentKeyRendered !== newContentKey;
-
-    if (currentContentKeyRendered && currentContentKeyRendered !== newContentKey) {
-      const savedProgress = getSavedProgress(currentEntry);
-      if (savedProgress?.currentTime && (!savedProgress.progress || savedProgress.progress < 95)) {
-        progressInput.value = Math.floor(savedProgress.currentTime);
-      } else {
-        progressInput.value = "";
-      }
-    }
-    currentContentKeyRendered = newContentKey;
-
-    const url = buildEmbedUrl();
-    embedUrlOutput.value = url;
-    iframeCodeOutput.value = buildIframeCode(url);
-
-    if (refreshFrame || playerFrame.src !== url) {
-      playerFrame.src = url;
-      lastRecordedTime = null;
-    }
-
-    if (getMediaType() === "tv") {
-      const currentSeason = Number(seasonInput.value) || 1;
-      const currentEpisode = Number(episodeInput.value) || 1;
-      const tmdbId = tmdbIdInput.value.trim();
-
-      if (tmdbId !== currentTmdbIdRendered || currentSeason !== currentSeasonRendered) {
-        renderEpisodesList(tmdbId, currentSeason, currentEpisode);
-      } else if (currentEpisode !== currentEpisodeRendered) {
-        updateActiveEpisodeCard(currentEpisode); // Skips fetching if only the episode changed
-      }
-    } else {
-      episodeListContainer.innerHTML = "";
-      currentTmdbIdRendered = null;
-      currentSeasonRendered = null;
-      currentEpisodeRendered = null;
-    }
-  }
-
-  async function copyValue(targetId, button) {
-    const target = document.querySelector(`#${targetId}`);
-    const originalText = button.textContent;
-
-    try {
-      await navigator.clipboard.writeText(target.value);
-      button.textContent = "Copied";
-    } catch {
-      target.select();
-      document.execCommand("copy");
-      button.textContent = "Copied";
-    }
-
-    window.setTimeout(() => {
-      button.textContent = originalText;
-    }, 1400);
-  }
-
-  function parsePlayerMessage(data) {
-    if (typeof data !== "string") {
-      return data;
-    }
-
-    try {
-      return JSON.parse(data);
-    } catch {
-      return data;
-    }
-  }
-
-  function appendPlayerEvent(message) {
-    const parsed = parsePlayerMessage(message);
-
-    if (!parsed || parsed.type !== "PLAYER_EVENT") {
-      return;
-    }
-
-    const incomingTime = parsed.data?.currentTime ?? parsed.data?.timestamp;
-    if (incomingTime !== undefined && incomingTime === lastRecordedTime) {
-      return; // Ignore duplicate timestamps when the video is paused
-    }
-    lastRecordedTime = incomingTime;
-
-    saveProgress(getCurrentEntry(), parsed.data || {});
-
-    eventEntries = [
-      JSON.stringify(parsed, null, 2),
-      ...eventEntries,
-    ].slice(0, 8);
-
-    eventLog.textContent = eventEntries.join("\n\n");
-  }
-
-  setMediaType(mediaType);
-
-  if (serverProviderInput) {
-    let savedServer = readStore(SERVER_KEY, "https://vidsync.live/embed");
-    if (savedServer.includes("vidsrc.net") || savedServer.includes("vidsrc.to") || savedServer.includes("embed.su")) savedServer = "https://vidsync.live/embed";
-    serverProviderInput.value = savedServer;
-    serverProviderInput.addEventListener("change", () => {
-      writeStore(SERVER_KEY, serverProviderInput.value);
-      updateOutputs({ refreshFrame: true });
-    });
-  }
-
-  tmdbIdInput.value = id;
-  seasonInput.value = pageParams.get("season") || selectedTitle?.season || "1";
-  seasonInput.dataset.tempValue = seasonInput.value;
-  episodeInput.value = pageParams.get("episode") || selectedTitle?.episode || "1";
-  episodeInput.dataset.tempValue = episodeInput.value;
-
-  const savedProgress = getSavedProgress(getCurrentEntry());
-  const requestedProgress = pageParams.get("progress");
-  if (requestedProgress) {
-    progressInput.value = requestedProgress;
-  } else if (savedProgress?.currentTime && (!savedProgress.progress || savedProgress.progress < 95)) {
-    progressInput.value = Math.floor(savedProgress.currentTime);
-  } else {
-    progressInput.value = "";
-  }
-  playerTitle.textContent = title;
-  playerMeta.textContent = mediaType === "tv" ? `TV Series - TMDB ${id}` : `Movie - TMDB ${id}`;
-  saveHistory(getCurrentEntry());
-
-  form.addEventListener("input", () => updateOutputs());
-  form.addEventListener("change", () => updateOutputs());
-
-  favoritePlayerButton.addEventListener("click", () => {
-    toggleFavorite(getCurrentEntry());
-    syncFavoriteButton();
-  });
-
-  reloadPreviewButton.addEventListener("click", () => {
-    updateOutputs({ refreshFrame: true });
-  });
-
-  clearEventsButton.addEventListener("click", () => {
-    eventEntries = [];
-    lastRecordedTime = null;
-    eventLog.textContent = "Waiting for player events...";
-  });
-
-  let lightsOut = false;
-  function toggleLightsOut() {
-    lightsOut = !lightsOut;
-    if (playerShell) playerShell.classList.toggle("lights-out", lightsOut);
-    if (lightsOutBtn) {
-      lightsOutBtn.classList.toggle("is-active", lightsOut);
-      lightsOutBtn.textContent = lightsOut ? "💡 Lights On" : "💡 Lights Out";
-    }
-    if (lightsOutOverlay) {
-      lightsOutOverlay.style.display = lightsOut ? "block" : "none";
-    }
-  }
-
-  if (lightsOutBtn) {
-    lightsOutBtn.addEventListener("click", toggleLightsOut);
-  }
-  if (lightsOutOverlay) {
-    lightsOutOverlay.addEventListener("click", toggleLightsOut);
-  }
-
-  window.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && lightsOut) {
-      toggleLightsOut();
-    }
-  });
-
-  async function runAutoFetch(silent = false) {
-    if (!autoFetchBtn) return;
-    try {
-      autoFetchBtn.textContent = "Fetching...";
-      autoFetchBtn.disabled = true;
-      const text = await autoFetchSubtitles(tmdbIdInput.value.trim(), getMediaType(), seasonInput.value, episodeInput.value);
-      
-      const blob = new Blob([text], { type: "text/vtt" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      
-      const entry = getCurrentEntry();
-      const filename = getMediaType() === "tv" 
-        ? `${entry.title.replace(/[^a-zA-Z0-9]/g, '_')}_S${entry.season}E${entry.episode}.vtt`
-        : `${entry.title.replace(/[^a-zA-Z0-9]/g, '_')}_Subtitle.vtt`;
-        
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      if (!silent) showVanillaToast("Subtitle downloaded successfully!\n\nIf your current player supports it (like Vidking or VidSrc.pm), click the 'CC' button to upload.", "success", 7000);
-    } catch (err) {
-      if (!silent) showVanillaToast(`Error: ${err.message}`, "error");
-    } finally {
-      autoFetchBtn.textContent = "Auto-Fetch Subtitles";
-      autoFetchBtn.disabled = false;
-    }
-  }
-
-  if (autoFetchBtn) {
-    autoFetchBtn.addEventListener("click", () => runAutoFetch(false));
-  }
-
-  if (findSubtitlesBtn) {
-    findSubtitlesBtn.addEventListener("click", () => {
-      const entry = getCurrentEntry();
-      let query = entry.title;
-      if (getMediaType() !== "tv" && entry.year) {
-        query += ` ${entry.year}`;
-      }
-      window.open(`https://subdl.com/search/${encodeURIComponent(query)}`, "_blank");
-    });
-  }
-
-  copyButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-      copyValue(button.dataset.copyTarget, button);
-    });
-  });
-
-  window.addEventListener("message", (event) => {
-    appendPlayerEvent(event.data);
-  });
-
-  updateOutputs({ refreshFrame: true });
-}
-
-// ==========================================
-// UI: PROFILE PAGE
-// ==========================================
-function initProfilePage() {
-  const continueList = document.querySelector("#continueList");
-  const favoriteList = document.querySelector("#favoriteList");
-  const historyList = document.querySelector("#historyList");
-  const clearProfileDataButton = document.querySelector("#clearProfileData");
-
-  if (!continueList || !favoriteList || !historyList) {
-    return;
-  }
-
-  const favoriteCount = document.querySelector("#favoriteCount");
-  const historyCount = document.querySelector("#historyCount");
-  const watchTimeTotal = document.querySelector("#watchTimeTotal");
-
-  function renderEmpty(target, text) {
-    target.innerHTML = `<p class="empty-state">${text}</p>`;
-  }
-
-  function renderProfileItem(item, options = {}) {
-    const mediaType = item.mediaType || "movie";
-    const normalized = getTitleFromEntry({ ...item, mediaType });
-    const href = buildPlayerHref(normalized, mediaType);
-    const progressText = item.currentTime
-      ? `${formatDuration(item.currentTime)} saved${item.duration ? ` of ${formatDuration(item.duration)}` : ""}`
-      : "";
-    const dateText = formatDate(item.updatedAt || item.watchedAt || item.savedAt);
-    const metaParts = [
-      mediaType === "tv" ? `S${normalized.season} E${normalized.episode}` : "Movie",
-      normalized.year || "Unknown year",
-      progressText,
-      dateText,
-    ].filter(Boolean);
-
-    const article = document.createElement("article");
-    article.className = "profile-item";
-    article.innerHTML = `
-      <a class="profile-item-link" href="${href}">
-        <img src="${normalized.poster}" alt="${normalized.title} poster" loading="lazy" onerror="this.onerror=null; this.removeAttribute('src');">
-        <span class="profile-item-copy">
-          <strong>${normalized.title}</strong>
-          <span>${metaParts.join(" | ")}</span>
-        </span>
-      </a>
-    `;
-
-    if (options.removeFavorite) {
-      const button = document.createElement("button");
-      button.className = "secondary-button compact-button";
-      button.type = "button";
-      button.textContent = "Remove";
-      button.addEventListener("click", () => {
-        toggleFavorite(normalized);
-        renderProfile();
-      });
-      article.append(button);
-    }
-
-    return article;
-  }
-
-  function renderProfile() {
-    const favorites = getFavorites();
-    const history = getHistory();
-    const progressItems = Object.values(getProgressStore())
-      .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-    
-    const continueItems = progressItems.filter((item) => (item.progress || 0) < 95);
-
-    favoriteCount.textContent = String(favorites.length);
-    historyCount.textContent = String(history.length);
-    watchTimeTotal.textContent = formatDuration(getGlobalWatchTime());
-
-    continueList.innerHTML = "";
-    favoriteList.innerHTML = "";
-    historyList.innerHTML = "";
-
-    if (continueItems.length) {
-      continueItems.forEach((item) => continueList.append(renderProfileItem(item)));
-    } else {
-      renderEmpty(continueList, "No active titles in progress.");
-    }
-
-    if (favorites.length) {
-      favorites.forEach((item) => favoriteList.append(renderProfileItem(item, { removeFavorite: true })));
-    } else {
-      renderEmpty(favoriteList, "No favorites yet.");
-    }
-
-    if (history.length) {
-      history.forEach((item) => historyList.append(renderProfileItem(item)));
-    } else {
-      renderEmpty(historyList, "No watch history yet.");
-    }
-  }
-
-  clearProfileDataButton.addEventListener("click", () => {
-    localStorage.removeItem(FAVORITES_KEY);
-    localStorage.removeItem(HISTORY_KEY);
-    localStorage.removeItem(PROGRESS_KEY);
-    localStorage.removeItem(WATCH_TIME_KEY);
-    renderProfile();
-  });
-
-  renderProfile();
-}
-
-// ==========================================
-// APP BOOTSTRAP
-// ==========================================
-document.addEventListener("DOMContentLoaded", () => {
-  initSelectionPage();
-  initPlayerPage();
-  initProfilePage();
-});
-
-// ==========================================
 // JWT AUTH & SYNC INTEGRATION
 // ==========================================
 const TOKEN_KEY = "freevid_token_v1";
@@ -2395,12 +1427,8 @@ function isLoggedIn() {
 }
 
 function logout() {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(USERNAME_KEY);
-  localStorage.removeItem(FAVORITES_KEY);
-  localStorage.removeItem(HISTORY_KEY);
-  localStorage.removeItem(PROGRESS_KEY);
-  localStorage.removeItem(WATCH_TIME_KEY);
+  [TOKEN_KEY, USERNAME_KEY, FAVORITES_KEY, HISTORY_KEY, PROGRESS_KEY, WATCH_TIME_KEY, TOMBSTONES_KEY, HISTORY_CLEARED_KEY]
+    .forEach((key) => localStorage.removeItem(key));
 }
 
 async function safeParseJson(response, fallback = {}) {
@@ -2448,8 +1476,20 @@ async function apiLogin(username, password) {
   }
   writeStore(TOKEN_KEY, data.token);
   writeStore(USERNAME_KEY, data.username);
-  await apiSyncPull();
+  // Push local data first so the server merges it instead of overwriting it with an empty account.
+  await apiSyncPush();
   return data;
+}
+
+function applySyncPayload(data) {
+  if (Array.isArray(data.favorites)) writeStore(FAVORITES_KEY, data.favorites);
+  if (Array.isArray(data.history)) writeStore(HISTORY_KEY, data.history);
+  if (data.progress && typeof data.progress === 'object') writeStore(PROGRESS_KEY, data.progress);
+  if (data.watchTime !== undefined) writeStore(WATCH_TIME_KEY, Number(data.watchTime) || 0);
+  if (data.deleted && typeof data.deleted === 'object') writeStore(TOMBSTONES_KEY, data.deleted);
+  if (data.historyClearedAt !== undefined) {
+    writeStore(HISTORY_CLEARED_KEY, Number(data.historyClearedAt) || 0);
+  }
 }
 
 async function apiSyncPull() {
@@ -2461,11 +1501,7 @@ async function apiSyncPull() {
     if (!response.ok) return;
     const data = await safeParseJson(response);
     if (!data) return;
-    
-    if (data.favorites) writeStore(FAVORITES_KEY, data.favorites);
-    if (data.history) writeStore(HISTORY_KEY, data.history);
-    if (data.progress) writeStore(PROGRESS_KEY, data.progress);
-    if (data.watchTime !== undefined) writeStore(WATCH_TIME_KEY, data.watchTime);
+    applySyncPayload(data);
   } catch (err) {
     console.warn('Sync pull failed:', err);
   }
@@ -2474,10 +1510,14 @@ async function apiSyncPull() {
 async function apiSyncPush() {
   if (!isLoggedIn()) return;
   try {
-    const favorites = readStore(FAVORITES_KEY, []);
-    const history = readStore(HISTORY_KEY, []);
-    const progress = readStore(PROGRESS_KEY, {});
-    const watchTime = readStore(WATCH_TIME_KEY, 0);
+    const payload = {
+      favorites: readStore(FAVORITES_KEY, []),
+      history: readStore(HISTORY_KEY, []),
+      progress: readStore(PROGRESS_KEY, {}),
+      watchTime: readStore(WATCH_TIME_KEY, 0),
+      deleted: getTombstones(),
+      historyClearedAt: getHistoryClearedAt(),
+    };
 
     const response = await fetch('/api/user/sync', {
       method: 'POST',
@@ -2485,16 +1525,12 @@ async function apiSyncPush() {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${getToken()}`
       },
-      body: JSON.stringify({ favorites, history, progress, watchTime })
+      body: JSON.stringify(payload)
     });
     if (!response.ok) return;
     const data = await safeParseJson(response);
     if (!data) return;
-    
-    if (data.favorites) writeStore(FAVORITES_KEY, data.favorites);
-    if (data.history) writeStore(HISTORY_KEY, data.history);
-    if (data.progress) writeStore(PROGRESS_KEY, data.progress);
-    if (data.watchTime !== undefined) writeStore(WATCH_TIME_KEY, data.watchTime);
+    applySyncPayload(data);
   } catch (err) {
     console.warn('Sync push failed:', err);
   }
@@ -2579,6 +1615,7 @@ function throttledSyncPush() {
 export {
   TMDB_API_URL, TMDB_IMAGE_URL, TMDB_CACHE_KEY, DEFAULT_TMDB_KEY,
   FAVORITES_KEY, HISTORY_KEY, PROGRESS_KEY, WATCH_TIME_KEY, SERVER_KEY, EPISODE_PROGRESS_KEY,
+  TOMBSTONES_KEY, HISTORY_CLEARED_KEY,
   catalog, cleanNumber, getCachedCatalog, getActiveCatalog,
   findTitle, readStore, writeStore, getContentKey, getTitleFromEntry,
   getFavorites, getHistory, getProgressStore, getGlobalWatchTime,

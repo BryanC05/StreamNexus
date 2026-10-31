@@ -1,8 +1,9 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import SelectionPage from './SelectionPage.jsx';
 import PlayerPage from './PlayerPage.jsx';
 import ProfilePage from './ProfilePage.jsx';
+import SourcesPage from './SourcesPage.jsx';
 
 function ScrollToTop() {
   const { pathname, search } = useLocation();
@@ -22,6 +23,7 @@ export default function App() {
         <Route path="/" element={<SelectionPage />} />
         <Route path="/player" element={<PlayerPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/sources" element={<SourcesPage />} />
       </Routes>
     </BrowserRouter>
   );

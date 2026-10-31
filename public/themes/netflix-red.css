@@ -1,0 +1,68 @@
+/* Netflix Red — black canvas, red signal. Air structure. */
+:root {
+  color-scheme: dark;
+
+  --bg: #080809;
+  --bg-image: none;
+  --panel: #111113;
+  --panel-soft: #17171b;
+  --panel-strong: #1e1e23;
+  --border: rgba(247, 247, 248, 0.16);
+  --border-soft: rgba(247, 247, 248, 0.08);
+  --text: #f7f7f8;
+  --muted: #a1a1aa;
+
+  --accent: #e50914;
+  --accent-strong: #ff424d;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(229, 9, 20, 0.16);
+
+  --danger: #ff5a5f;
+  --danger-soft: rgba(255, 90, 95, 0.14);
+  --success: #46d17d;
+
+  --chrome-bg: rgba(8, 8, 9, 0.46);
+  --chrome-bg-soft: rgba(255, 255, 255, 0.05);
+  --chrome-bg-strong: rgba(8, 8, 9, 0.78);
+  --chrome-border: rgba(247, 247, 248, 0.18);
+  --chrome-border-strong: rgba(247, 247, 248, 0.38);
+  --chrome-highlight: transparent;
+  --chrome-shadow: none;
+  --chrome-blur: blur(18px) saturate(130%);
+
+  --font-body: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-hero: 'Anton', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-accent: 'Caveat', 'Inter', ui-sans-serif, cursive;
+  --display-weight: 500;
+  --display-tracking: -0.02em;
+
+  --shadow-md: none;
+  --shadow-lg: none;
+
+  --canvas-accent: #ff424d;
+  --header-bg: rgba(8, 8, 9, 0.86);
+  --hero-scrim: rgba(0, 0, 0, 0.66);
+  --hero-em: color-mix(in srgb, #e50914 40%, #ffffff);
+  --hero-ink: #ffffff;
+  --hero-muted: rgba(247, 247, 248, 0.72);
+  --hero-ring: rgba(247, 247, 248, 0.24);
+
+  --card-bg: #f5f5f5;
+  --card-hover-bg: #ffffff;
+  --card-ink: #1b1b1b;
+  --card-muted: #5d5d5d;
+  --card-line: rgba(27, 27, 27, 0.14);
+  --card-line-strong: rgba(27, 27, 27, 0.34);
+  --card-border: transparent;
+  --card-field-bg: #ffffff;
+  --card-link: #1b1b1b;
+  --card-link-underline: #d40a13;
+
+  --media-bg: #111111;
+  --media-badge-bg: rgba(0, 0, 0, 0.55);
+  --media-badge-ink: #ffffff;
+  --media-badge-line: rgba(255, 255, 255, 0.14);
+  --media-favorite-bg: rgba(0, 0, 0, 0.55);
+  --media-favorite-ink: #ffffff;
+}

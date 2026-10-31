@@ -3,24 +3,37 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>FreeVid App</title>
+    <meta name="theme-color" id="theme-color" content="#000000">
+    <title>FreeVid — StreamNexus</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Caveat:wght@500;600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/styles.css">
+    <!-- Shared Air geometry loads before any skin; theme files only supply tokens. -->
+    <link rel="stylesheet" href="/themes/air.css">
     <!-- Feature #8: Dynamic theme loading -->
-    <link rel="stylesheet" id="theme-stylesheet" href="/royal-theme.css">
+    <link rel="stylesheet" id="theme-stylesheet" href="/themes/royal-theme.css">
     <script>
       // Load saved theme before React renders
       (function() {
-        const savedTheme = localStorage.getItem('streamnexus_active_theme') || 'royal-theme';
+        const themeColors = {
+          'royal-theme': '#000000',
+          'minimal-light': '#f5f3ed',
+          'modern-dark': '#070d14',
+          'netflix-red': '#080809',
+        };
+        const savedTheme = localStorage.getItem('streamnexus_active_theme');
         const themeLink = document.getElementById('theme-stylesheet');
-        if (savedTheme !== 'royal-theme' && themeLink) {
-          themeLink.href = `/${savedTheme}.css`;
+        const themeColor = document.getElementById('theme-color');
+        if (themeLink && themeColors[savedTheme]) {
+          if (savedTheme !== 'royal-theme') themeLink.href = `/themes/${savedTheme}.css`;
+          themeColor?.setAttribute('content', themeColors[savedTheme]);
         }
       })();
     </script>
   </head>
   <body>
     <div id="root"></div>
-    <script src="/env.js"></script>
     <script type="module" src="/main.jsx"></script>
   </body>
 </html>
